@@ -1,5 +1,5 @@
 {
-    "name": "attar/sylius-paymob-plugin",
+    "name": "3attar/sylius-paymob-plugin",
     "type": "sylius-plugin",
     "description": "This is the payment integration with paymob",
     "keywords": [
