@@ -6,6 +6,7 @@ namespace Ahmedkhd\SyliusPaymobPlugin\Payum;
 
 use Payum\Core\Bridge\Spl\ArrayObject;
 use Payum\Core\GatewayFactory;
+use Sylius\PayPalPlugin\Payum\Action\StatusAction;
 
 final class PaymobGatewayFactory extends GatewayFactory
 {
@@ -13,7 +14,8 @@ final class PaymobGatewayFactory extends GatewayFactory
     {
         $config->defaults([
             'payum.factory_name' => 'paymob',
-            'payum.factory_title' => 'Paymob'
+            'payum.factory_title' => 'Paymob',
+            'payum.action.status' => new StatusAction(),
         ]);
 
         $config['payum.api'] = function (ArrayObject $config) {
