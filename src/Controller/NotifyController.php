@@ -59,6 +59,11 @@ class NotifyController extends AbstractController
     {
 
         try{
+
+            $this->log->emergency("paymob callback");
+            $this->log->emergency($request);
+            $this->log->emergency($request>getContent());
+            
             $paymobResponse = \GuzzleHttp\json_decode($request->getContent());
             $response = false;
     
