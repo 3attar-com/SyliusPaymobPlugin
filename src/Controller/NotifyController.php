@@ -101,6 +101,7 @@ class NotifyController extends AbstractController
             }
         }
         catch(\Exception $ex){
+            $this->log->emergency($request);
             $this->log->emergency($ex);
         }
         
