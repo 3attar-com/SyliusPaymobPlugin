@@ -29,6 +29,7 @@ services:
     arguments:
       - '@payum'
       - '@ahmedkhd.sylius_paymob_plugin.service.paymob'
+      - '@monolog.logger'
 
 #      - '@router'
 #      - '@be_happy_rights_management.repository.right'
