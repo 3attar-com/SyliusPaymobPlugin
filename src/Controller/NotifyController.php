@@ -104,7 +104,7 @@ class NotifyController extends AbstractController
             }
             $this->log->emergency("paymob callback");
             $this->log->emergency($request);
-            $this->log->emergency($request>getContent());
+            
         }
         catch(\Exception $ex){
             $this->log->emergency($request);
