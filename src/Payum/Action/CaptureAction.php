@@ -110,7 +110,7 @@ final class CaptureAction implements ActionInterface, ApiAwareInterface
                     'amount_cents' => intval($payment->getOrder()->getTotal()),
                     'currency' => "EGP",
                     'merchant_id' => $this->api->getMerchantId(),
-                    'merchant_order_id' => $payment->getId(),
+                    'merchant_order_id' => $payment->getOrder()->getId(),
                     "shipping_data"=> [
                         "apartment"=> "NA",
                         'email'  => $payment->getOrder()->getCustomer()->getEmail() ?? "NA",
