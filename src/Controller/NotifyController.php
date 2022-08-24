@@ -42,11 +42,15 @@ class NotifyController extends AbstractController
         try {
             $_GET_PARAMS = $request->query->all();
 
-            if(!empty($_GET_PARAMS) && $_GET_PARAMS['success'] == 'true') {
-                return $this->redirectToRoute('sylius_shop_order_thank_you');
-            }
-
             $order = $this->paymobService->getPaymentById($_GET_PARAMS['merchant_order_id'])->getOrder();
+
+            if (!empty($_GET_PARAMS) && $_GET_PARAMS['success'] == 'true') {
+
+                if ($order->getChannel()->getCode() == '3attar_web')
+                    return $this->redirectToRoute('sylius_shop_order_thank_you');
+                else
+                    return $this->redirect('https://3attar.page.link?apn=com.attar.app&ibi=com.3attar.ios.app&link=https://3attar.com?payment=1');
+            }
         }
         catch(\Exception $ex){
             $this->log->emergency($ex);
