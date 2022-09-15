@@ -1,8 +1,6 @@
 <?php
 
-
 namespace Ahmedkhd\SyliusPaymobPlugin\Services;
-
 
 use Sylius\Component\Core\Model\PaymentInterface;
 
@@ -28,4 +26,10 @@ interface PaymobServiceInterface
      * @return PaymentInterface
      */
     public function getPaymentById($payment_id): PaymentInterface;
+
+    /**
+     * @param $payment_id
+     */
+    public function getOrder($payment_id);
+
 }

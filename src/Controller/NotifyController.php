@@ -1,18 +1,17 @@
 <?php
 
-
 namespace Ahmedkhd\SyliusPaymobPlugin\Controller;
 
 use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobService;
 use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobServiceInterface;
-use Sylius\Component\Core\OrderPaymentStates;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Request;
+use App\Entity\Order\Order;
+use Monolog\Logger;
 use Payum\Core\Payum;
 use Sylius\Component\Core\Model\PaymentInterface;
-use Monolog\Level;
-use Monolog\Logger;
+use Sylius\Component\Core\OrderPaymentStates;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class NotifyController extends AbstractController
 {
@@ -28,11 +27,10 @@ class NotifyController extends AbstractController
     private $log;
 
     public function __construct(
-        Payum                  $payum,
+        Payum $payum,
         PaymobServiceInterface $paymobService,
-        Logger                 $log
-    )
-    {
+        Logger $log
+    ) {
         $this->payum = $payum;
         $this->paymobService = $paymobService;
         $this->log = $log;
@@ -43,7 +41,7 @@ class NotifyController extends AbstractController
         try {
             $_GET_PARAMS = $request->query->all();
 
-            $order = $this->paymobService->getPaymentById($_GET_PARAMS['merchant_order_id'])->getOrder();
+            $order = $this->paymobService->getOrder($_GET_PARAMS['merchant_order_id']);
 
             if (!empty($_GET_PARAMS) && $_GET_PARAMS['success'] == 'true') {
 
@@ -53,11 +51,10 @@ class NotifyController extends AbstractController
                     return $this->redirect('https://3attar.page.link?apn=com.attar.app&ibi=com.3attar.ios.app&link=https://3attar.com?payment=1');
                 }
             }
+            return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $order->getTokenValue()]);
         } catch (\Exception $ex) {
             $this->log->emergency($ex);
         }
-
-        return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $order->getTokenValue()]);
     }
 
     public function webhookAction(Request $request): Response
@@ -108,6 +105,7 @@ class NotifyController extends AbstractController
             $this->log->emergency($request);
             $this->log->emergency($ex);
         }
+
         return new Response(\GuzzleHttp\json_encode(['success' => $response]), $response ? 200 : 400);
     }
 }
