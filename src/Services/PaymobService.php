@@ -1,14 +1,13 @@
 <?php
 
-
 namespace Ahmedkhd\SyliusPaymobPlugin\Services;
 
+use App\Entity\Order\Order;
 use Sylius\Bundle\ResourceBundle\Doctrine\ORM\EntityRepository;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use App\Entity\Order\Order;
 
 final class PaymobService extends AbstractService implements PaymobServiceInterface
 {
@@ -51,11 +50,19 @@ final class PaymobService extends AbstractService implements PaymobServiceInterf
         $em = $this->container->get('doctrine.orm.default_entity_manager');
         $orderRepo = $em->getRepository(Order::class);
         /**@var $payment PaymentInterface|null */
-        $payment =$orderRepo->find($payment_id)->getLastPayment();
-        
-        if (null === $payment OR $payment->getState() !== PaymentInterface::STATE_NEW) {
+        $payment = $orderRepo->find($payment_id)->getLastPayment();
+
+        if (null === $payment or $payment->getState() !== PaymentInterface::STATE_NEW) {
             throw new NotFoundHttpException('Order not have available payment');
         }
         return $payment;
+    }
+
+    public function getOrder($payment_id)
+    {
+        $em = $this->container->get('doctrine.orm.default_entity_manager');
+        $orderRepo = $em->getRepository(Order::class);
+        $order = $orderRepo->find($payment_id);
+        return $order;
     }
 }
