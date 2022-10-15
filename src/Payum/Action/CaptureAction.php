@@ -1,21 +1,23 @@
 <?php
 
-declare(strict_types=1);
+declare (strict_types = 1);
 
 namespace Ahmedkhd\SyliusPaymobPlugin\Payum\Action;
 
+use Ahmedkhd\SyliusPaymobPlugin\Payum\SyliusApi;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Payum\Core\Action\ActionInterface;
 use Payum\Core\ApiAwareInterface;
 use Payum\Core\Exception\RequestNotSupportedException;
 use Payum\Core\Exception\UnsupportedApiException;
+use Payum\Core\Request\Capture;
 use Sylius\Component\Core\Model\PaymentInterface;
 use Sylius\Component\Core\Model\PaymentInterface as SyliusPaymentInterface;
-use Payum\Core\Request\Capture;
-use Ahmedkhd\SyliusPaymobPlugin\Payum\SyliusApi;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
-final class CaptureAction implements ActionInterface, ApiAwareInterface
+final class CaptureAction extends AbstractController implements ActionInterface, ApiAwareInterface
 {
     /** @var Client */
     private $client;
@@ -26,29 +28,37 @@ final class CaptureAction implements ActionInterface, ApiAwareInterface
     /** @var array */
     private $headers;
 
-    public function __construct(Client $client)
+    public function __construct(Client $client, ContainerInterface $container)
     {
+        parent::setContainer($container);
+
         $this->client = $client;
         $this->headers['headers'] = [
-            'Accept'     => '*/*',
-            'Content-Type' => 'application/json'
+            'Accept' => '*/*',
+            'Content-Type' => 'application/json',
         ];
     }
 
-    public function execute($request): void
+    public function execute($request)
     {
         RequestNotSupportedException::assertSupports($this, $request);
 
         /** @var SyliusPaymentInterface $payment */
         $payment = $request->getModel();
-
+        $order = $payment->getOrder();
+        $ids = explode(",", $this->container->getParameter('CIB_PROMOTION_ID'));
+        if ($order->getPromotionCoupon() != null) {
+            if (in_array((string) $order->getPromotionCoupon()->getPromotion()->getId(), $ids) && $payment->getMethod()->getCode() != 'CIB') {
+                return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $payment->getOrder()->getTokenValue()]);
+            }
+        }
         try {
             $authToken = $this->authenticate();
             $orderId = $this->createOrderId($payment, $authToken);
             $paymentToken = $this->getPaymentKey($payment, $authToken, strval($orderId));
             $iframeURL = "https://accept.paymobsolutions.com/api/acceptance/iframes/{$this->api->getIframe()}?payment_token={$paymentToken}";
         } catch (RequestException $exception) {
-            $payment->setDetails(['status'=> "failed", "message" => $exception->getMessage()]);
+            $payment->setDetails(['status' => "failed", "message" => $exception->getMessage()]);
             $payment->setState(PaymentInterface::STATE_FAILED);
             return;
         }
@@ -59,9 +69,8 @@ final class CaptureAction implements ActionInterface, ApiAwareInterface
     public function supports($request): bool
     {
         return
-            $request instanceof Capture &&
-            $request->getModel() instanceof SyliusPaymentInterface
-            ;
+        $request instanceof Capture &&
+        $request->getModel() instanceof SyliusPaymentInterface;
     }
 
     public function setApi($api): void
@@ -84,8 +93,8 @@ final class CaptureAction implements ActionInterface, ApiAwareInterface
         $response = $this->client->request('POST', 'https://accept.paymobsolutions.com/api/auth/tokens',
             $this->getBodyWithHeader([
                 'body' => \GuzzleHttp\json_encode([
-                    'api_key' => $this->api->getApiKey()
-                ])
+                    'api_key' => $this->api->getApiKey(),
+                ]),
             ])
         );
 
@@ -100,7 +109,7 @@ final class CaptureAction implements ActionInterface, ApiAwareInterface
      * @return string
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    private function createOrderId(SyliusPaymentInterface $payment,string $token)
+    private function createOrderId(SyliusPaymentInterface $payment, string $token)
     {
         $response = $this->client->request('POST', 'https://accept.paymobsolutions.com/api/ecommerce/orders',
             $this->getBodyWithHeader([
@@ -111,21 +120,21 @@ final class CaptureAction implements ActionInterface, ApiAwareInterface
                     'currency' => "EGP",
                     'merchant_id' => $this->api->getMerchantId(),
                     'merchant_order_id' => $payment->getOrder()->getId(),
-                    "shipping_data"=> [
-                        "apartment"=> "NA",
-                        'email'  => $payment->getOrder()->getCustomer()->getEmail() ?? "NA",
-                        'phone_number'  => $payment->getOrder()->getCustomer()->getPhoneNumber() ?? "NA",
-                        "floor"=> "NA",
+                    "shipping_data" => [
+                        "apartment" => "NA",
+                        'email' => $payment->getOrder()->getCustomer()->getEmail() ?? "NA",
+                        'phone_number' => $payment->getOrder()->getCustomer()->getPhoneNumber() ?? "NA",
+                        "floor" => "NA",
                         'first_name' => $payment->getOrder()->getCustomer()->getFirstName() ?? "NA",
-                        'last_name'  => $payment->getOrder()->getCustomer()->getLastName() ?? "NA",
+                        'last_name' => $payment->getOrder()->getCustomer()->getLastName() ?? "NA",
                         $payment->getOrder()->getBillingAddress()->getStreet() ?? "NA",
-                        "building"=> "NA",
-                        'postal_code'  => $payment->getOrder()->getBillingAddress()->getPostcode() ?? "NA",
-                        'city'  => $payment->getOrder()->getBillingAddress()->getCity() ?? "NA",
-                        'country'  => $payment->getOrder()->getBillingAddress()->getCountryCode() ?? "NA",
-                        'state'  => $payment->getOrder()->getBillingAddress()->getProvinceName() ?? "NA",
-                    ]
-                ])
+                        "building" => "NA",
+                        'postal_code' => $payment->getOrder()->getBillingAddress()->getPostcode() ?? "NA",
+                        'city' => $payment->getOrder()->getBillingAddress()->getCity() ?? "NA",
+                        'country' => $payment->getOrder()->getBillingAddress()->getCountryCode() ?? "NA",
+                        'state' => $payment->getOrder()->getBillingAddress()->getProvinceName() ?? "NA",
+                    ],
+                ]),
             ])
         )->getBody()->getContents();
 
@@ -140,7 +149,7 @@ final class CaptureAction implements ActionInterface, ApiAwareInterface
      * @return \Psr\Http\Message\ResponseInterface
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
-    private function getPaymentKey(SyliusPaymentInterface $payment,string $token,string $orderId)
+    private function getPaymentKey(SyliusPaymentInterface $payment, string $token, string $orderId)
     {
         $response = $this->client->request('POST', 'https://accept.paymobsolutions.com/api/acceptance/payment_keys',
             $this->getBodyWithHeader([
@@ -154,20 +163,20 @@ final class CaptureAction implements ActionInterface, ApiAwareInterface
                     'integration_id' => $this->api->getIntegrationId(),
                     'billing_data' => [
                         'first_name' => $payment->getOrder()->getCustomer()->getFirstName() ?? "NA",
-                        'last_name'  => $payment->getOrder()->getCustomer()->getLastName() ?? "NA",
-                        'email'  => $payment->getOrder()->getCustomer()->getEmail() ?? "NA",
-                        'phone_number'  => $payment->getOrder()->getCustomer()->getPhoneNumber() ?? "NA",
-                        'apartment'  => "NA",
-                        'floor'  => 'NA',
-                        'street'  => $payment->getOrder()->getBillingAddress()->getStreet() ?? "NA",
-                        'building'  => 'NA',
+                        'last_name' => $payment->getOrder()->getCustomer()->getLastName() ?? "NA",
+                        'email' => $payment->getOrder()->getCustomer()->getEmail() ?? "NA",
+                        'phone_number' => $payment->getOrder()->getCustomer()->getPhoneNumber() ?? "NA",
+                        'apartment' => "NA",
+                        'floor' => 'NA',
+                        'street' => $payment->getOrder()->getBillingAddress()->getStreet() ?? "NA",
+                        'building' => 'NA',
                         'shipping_method' => $payment->getOrder()->getShipments()->toArray()[0]->getMethod()->getName() ?? "NA",
-                        'postal_code'  => $payment->getOrder()->getBillingAddress()->getPostcode() ?? "NA",
-                        'city'  => $payment->getOrder()->getBillingAddress()->getCity() ?? "NA",
-                        'country'  => $payment->getOrder()->getBillingAddress()->getCountryCode() ?? "NA",
-                        'state'  => $payment->getOrder()->getBillingAddress()->getProvinceName() ?? "NA",
-                    ]
-                ])
+                        'postal_code' => $payment->getOrder()->getBillingAddress()->getPostcode() ?? "NA",
+                        'city' => $payment->getOrder()->getBillingAddress()->getCity() ?? "NA",
+                        'country' => $payment->getOrder()->getBillingAddress()->getCountryCode() ?? "NA",
+                        'state' => $payment->getOrder()->getBillingAddress()->getProvinceName() ?? "NA",
+                    ],
+                ]),
             ])
         );
 

@@ -12,7 +12,7 @@ services:
 
   Ahmedkhd\SyliusPaymobPlugin\Payum\Action\CaptureAction:
     public: true
-    arguments: [ "@sylius.http_client" ]
+    arguments: [ "@sylius.http_client" , "@service_container"]
     tags:
       - { name: payum.action, factory: paymob, alias: payum.action.capture }
 
