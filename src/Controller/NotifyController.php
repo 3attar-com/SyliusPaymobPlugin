@@ -7,6 +7,7 @@ use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobServiceInterface;
 use App\Entity\Order\Order;
 use Monolog\Logger;
 use Payum\Core\Payum;
+use Sylius\Bundle\AdminBundle\EmailManager\OrderEmailManagerInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
 use Sylius\Component\Core\OrderPaymentStates;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -26,14 +27,19 @@ class NotifyController extends AbstractController
      */
     private $log;
 
+    /** @var OrderEmailManagerInterface */
+    private $orderEmailManager;
+
     public function __construct(
         Payum $payum,
         PaymobServiceInterface $paymobService,
-        Logger $log
+        Logger $log,
+        OrderEmailManagerInterface $orderEmailManager
     ) {
         $this->payum = $payum;
         $this->paymobService = $paymobService;
         $this->log = $log;
+        $this->orderEmailManager = $orderEmailManager;
     }
 
     public function doAction(Request $request): Response
@@ -44,7 +50,7 @@ class NotifyController extends AbstractController
             $order = $this->paymobService->getOrder($_GET_PARAMS['merchant_order_id']);
 
             if (!empty($_GET_PARAMS) && $_GET_PARAMS['success'] == 'true') {
-
+                $this->orderEmailManager->sendConfirmationEmail($order);
                 if ($order->getChannel()->getCode() == '3attar_web') {
                     return $this->redirectToRoute('sylius_shop_order_thank_you');
                 } else {

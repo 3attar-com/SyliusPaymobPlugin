@@ -30,6 +30,7 @@ services:
       - '@payum'
       - '@ahmedkhd.sylius_paymob_plugin.service.paymob'
       - '@monolog.logger'
+      - '@sylius.email_manager.order'
 
 #      - '@router'
 #      - '@be_happy_rights_management.repository.right'
