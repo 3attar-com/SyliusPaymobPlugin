@@ -7,7 +7,7 @@ use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobServiceInterface;
 use App\Entity\Order\Order;
 use Monolog\Logger;
 use Payum\Core\Payum;
-use Sylius\Bundle\AdminBundle\EmailManager\OrderEmailManagerInterface;
+use Sylius\Bundle\ShopBundle\EmailManager\OrderEmailManagerInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
 use Sylius\Component\Core\OrderPaymentStates;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
