@@ -3,6 +3,7 @@
 namespace Ahmedkhd\SyliusPaymobPlugin\Services;
 
 use App\Entity\Order\Order;
+use App\Entity\Payment\Payment;
 use Sylius\Bundle\ResourceBundle\Doctrine\ORM\EntityRepository;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
@@ -48,9 +49,9 @@ final class PaymobService extends AbstractService implements PaymobServiceInterf
     public function getPaymentById($payment_id): PaymentInterface
     {
         $em = $this->container->get('doctrine.orm.default_entity_manager');
-        $orderRepo = $em->getRepository(Order::class);
+        $paymentRepo = $em->getRepository(Payment::class);
         /**@var $payment PaymentInterface|null */
-        $payment = $orderRepo->find($payment_id)->getLastPayment();
+        $payment = $paymentRepo->findOneBy(['paymentGatewayOrderId' => $payment_id]);
 
         if (null === $payment or $payment->getState() !== PaymentInterface::STATE_NEW) {
             throw new NotFoundHttpException('Order not have available payment');
@@ -61,8 +62,8 @@ final class PaymobService extends AbstractService implements PaymobServiceInterf
     public function getOrder($payment_id)
     {
         $em = $this->container->get('doctrine.orm.default_entity_manager');
-        $orderRepo = $em->getRepository(Order::class);
-        $order = $orderRepo->find($payment_id);
+        $paymentRepo = $em->getRepository(Payment::class);
+        $order = $paymentRepo->findOneBy([ 'paymentGatewayOrderId' => $payment_id])->getOrder();
         return $order;
     }
 }
