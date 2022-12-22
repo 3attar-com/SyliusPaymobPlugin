@@ -46,9 +46,7 @@ class NotifyController extends AbstractController
     {
         try {
             $_GET_PARAMS = $request->query->all();
-
-            $order = $this->paymobService->getOrder($_GET_PARAMS['merchant_order_id']);
-
+            $order = $this->paymobService->getOrder($_GET_PARAMS['order']);
             if (!empty($_GET_PARAMS) && $_GET_PARAMS['success'] == 'true') {
                 $this->orderEmailManager->sendConfirmationEmail($order);
                 if ($order->getChannel()->getCode() == '3attar_web') {
@@ -74,9 +72,10 @@ class NotifyController extends AbstractController
                 isset($paymobResponse->obj->success) && $paymobResponse->obj->success &&
                 isset($paymobResponse->type) && $paymobResponse->type == PaymobService::TRANSACTION_TYPE &&
                 isset($paymobResponse->obj->order->paid_amount_cents) &&
-                isset($paymobResponse->obj->order->merchant_order_id)
+                isset($paymobResponse->obj->order->id)
             ) {
-                $payment = $this->paymobService->getPaymentById($paymobResponse->obj->order->merchant_order_id);
+
+                $payment = $this->paymobService->getPaymentById($paymobResponse->obj->order->id);
 
                 $orderAmount = $paymobResponse->obj->order->paid_amount_cents;
                 $amount = $payment->getAmount();
@@ -89,8 +88,8 @@ class NotifyController extends AbstractController
                     );
                     $response = true;
                 }
-            } else if (isset($paymobResponse->obj->order->merchant_order_id)) {
-                $paymentId = $paymobResponse->obj->order->merchant_order_id;
+            } else if (isset($paymobResponse->obj->order->id)) {
+                $paymentId = $paymobResponse->obj->order->id;
                 $payment = $this->paymobService->getPaymentById($paymentId);
                 $payment->setDetails(["status" => "failed", "message" => "payment_id: {$paymentId}"]);
 

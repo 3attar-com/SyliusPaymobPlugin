@@ -56,12 +56,14 @@ final class CaptureAction extends AbstractController implements ActionInterface,
             $authToken = $this->authenticate();
             $orderId = $this->createOrderId($payment, $authToken);
             $paymentToken = $this->getPaymentKey($payment, $authToken, strval($orderId));
-            $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING, "orderId" =>$orderId , "authToken" => $authToken ]);
+            $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING ]);
+            $payment->setPaymentGatewayOrderId((string)$orderId);
             $this->getDoctrine()->getManager()->flush();
             $iframeURL = "https://accept.paymobsolutions.com/api/acceptance/iframes/{$this->api->getIframe()}?payment_token={$paymentToken}";
         } catch (RequestException $exception) {
             $payment->setDetails(['status' => "failed", "message" => $exception->getMessage()]);
-            $payment->setState(PaymentInterface::STATE_FAILED);
+            # set state to new to allow the user to retry the payment
+            $payment->setState(PaymentInterface::STATE_NEW);
             return;
         }
 
@@ -121,7 +123,6 @@ final class CaptureAction extends AbstractController implements ActionInterface,
                     'amount_cents' => intval($payment->getOrder()->getTotal()),
                     'currency' => "EGP",
                     'merchant_id' => $this->api->getMerchantId(),
-                    array_key_exists('orderId', $payment->getDetails()) ?? 'merchant_order_id' =>$payment->getOrder()->getId() ,
                     "shipping_data" => [
                         "apartment" => "NA",
                         'email' => $payment->getOrder()->getCustomer()->getEmail() ?? "NA",
