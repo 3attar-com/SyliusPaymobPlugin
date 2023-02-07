@@ -4,6 +4,7 @@ namespace Ahmedkhd\SyliusPaymobPlugin\Controller;
 
 use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobService;
 use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobServiceInterface;
+use App\Entity\Customer\Customer;
 use App\Entity\Order\Order;
 use Monolog\Logger;
 use Payum\Core\Payum;
@@ -47,6 +48,9 @@ class NotifyController extends AbstractController
         try {
             $_GET_PARAMS = $request->query->all();
             $order = $this->paymobService->getOrder($_GET_PARAMS['order']);
+            if (is_null($order)){
+                return $this->redirectToRoute('sylius_shop_invoice_thank_you');
+            }
             if (!empty($_GET_PARAMS) && $_GET_PARAMS['success'] == 'true') {
                 $this->orderEmailManager->sendConfirmationEmail($order);
                 return $this->redirectToRoute('sylius_shop_order_thank_you');
@@ -62,7 +66,24 @@ class NotifyController extends AbstractController
         try {
             $paymobResponse = \GuzzleHttp\json_decode($request->getContent());
             $response = false;
-            if (
+            if ($paymobResponse->obj->api_source == "INVOICE" && $paymobResponse->obj->order->data->type =="credit" ) {
+                try {
+                    $walletService = $this->get('workouse_digital_wallet.wallet_service');
+
+                    $credit = $paymobResponse->obj->order->amount_cents;
+                    $email = $paymobResponse->obj->order->shipping_data->email;
+
+                    $customerRepo = $this->getDoctrine()->getRepository(Customer::class);
+                    $customer = $customerRepo->findOneBy(['email' => $email]);
+                    $walletService->addCreditToCustomer($customer  ,"by Paymob", [ "wallet"=>$credit , "expiredAt" => "01/01/2099" ]);
+
+                    $response = true;
+                }catch (\Exception $exception){
+                    dd($exception);
+                }
+
+            } else if (
+
                 !empty($paymobResponse) &&
                 isset($paymobResponse->obj->is_standalone_payment) &&
                 isset($paymobResponse->obj->success) && $paymobResponse->obj->success &&
@@ -70,7 +91,6 @@ class NotifyController extends AbstractController
                 isset($paymobResponse->obj->order->paid_amount_cents) &&
                 isset($paymobResponse->obj->order->id)
             ) {
-
                 $payment = $this->paymobService->getPaymentById($paymobResponse->obj->order->id);
 
                 $orderAmount = $paymobResponse->obj->order->paid_amount_cents;
@@ -99,6 +119,7 @@ class NotifyController extends AbstractController
                     OrderPaymentStates::STATE_AWAITING_PAYMENT
                 );
             }
+
             $this->log->emergency("paymob callback");
             $this->log->emergency($request);
 
