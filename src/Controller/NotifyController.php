@@ -45,6 +45,8 @@ class NotifyController extends AbstractController
 
     public function doAction(Request $request): Response
     {
+        $this->log->emergency($request);
+
         try {
             $_GET_PARAMS = $request->query->all();
             $order = $this->paymobService->getOrder($_GET_PARAMS['order']);
@@ -70,7 +72,7 @@ class NotifyController extends AbstractController
                 try {
                     $walletService = $this->get('workouse_digital_wallet.wallet_service');
 
-                    $credit = $paymobResponse->obj->order->amount_cents;
+                    $credit = $paymobResponse->obj->order->data->amount_deserved;
                     $email = $paymobResponse->obj->order->shipping_data->email;
 
                     $customerRepo = $this->getDoctrine()->getRepository(Customer::class);
@@ -79,7 +81,7 @@ class NotifyController extends AbstractController
 
                     $response = true;
                 }catch (\Exception $exception){
-                    dd($exception);
+                    $this->log->emergency($exception);
                 }
 
             } else if (
