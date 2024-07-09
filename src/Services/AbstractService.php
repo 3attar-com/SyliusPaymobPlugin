@@ -5,6 +5,7 @@ namespace Ahmedkhd\SyliusPaymobPlugin\Services;
 
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Sylius\Component\Core\Model\PaymentInterface;
 
 abstract class AbstractService
 {
@@ -18,5 +19,50 @@ abstract class AbstractService
     public function __construct(ContainerInterface $container)
     {
         $this->container = $container;
+    }
+
+    public function setPaymentState($payment, $paymentState, $orderPaymentState)
+    {
+        /** @var OrderInterface $order */
+        $order = $payment->getOrder();
+
+        $payment->setState($paymentState);
+        $order->setPaymentState($orderPaymentState);
+        $this->flushPaymentAndOrder($payment, $order);
+
+        return $order;
+    }
+
+    public function flushPaymentAndOrder($payment, $order)
+    {
+        $em = $this->container->get('doctrine.orm.default_entity_manager');
+        $em->persist($payment);
+        $em->persist($order);
+        $em->flush();
+    }
+
+    /**
+     * @param $payment_id
+     * @return PaymentInterface
+     */
+    public function getPaymentById($payment_id): PaymentInterface
+    {
+        $em = $this->container->get('doctrine.orm.default_entity_manager');
+        $paymentRepo = $em->getRepository(Payment::class);
+        /**@var $payment PaymentInterface|null */
+        $payment = $paymentRepo->findOneBy(['paymentGatewayOrderId' => $payment_id]);
+
+        if (null === $payment or $payment->getState() !== PaymentInterface::STATE_NEW) {
+            throw new NotFoundHttpException('Order not have available payment');
+        }
+        return $payment;
+    }
+
+    public function getOrder($payment_id)
+    {
+        $em = $this->container->get('doctrine.orm.default_entity_manager');
+        $paymentRepo = $em->getRepository(Payment::class);
+        $order = $paymentRepo->findOneBy([ 'paymentGatewayOrderId' => $payment_id])->getOrder();
+        return $order;
     }
 }

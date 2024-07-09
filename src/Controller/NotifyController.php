@@ -6,6 +6,7 @@ use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobService;
 use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobServiceInterface;
 use App\Entity\Customer\Customer;
 use App\Entity\Order\Order;
+use Exception;
 use Monolog\Logger;
 use Payum\Core\Payum;
 use Sylius\Bundle\ShopBundle\EmailManager\OrderEmailManagerInterface;
@@ -14,6 +15,7 @@ use Sylius\Component\Core\OrderPaymentStates;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class NotifyController extends AbstractController
 {
@@ -43,14 +45,47 @@ class NotifyController extends AbstractController
         $this->orderEmailManager = $orderEmailManager;
     }
 
+    /**
+     * @Route("/hyperpay", name="hyperpay")
+     */
+    // hyperpay iframe
+    public function hyperpay(Request $request): Response
+    {
+        $data = [
+            'payment_id' => $request->query->all()['payment_token']
+        ];
+        return $this->render('@AhmedkhdSyliusPaymobPlugin/hyperpay.html.twig', ['data' => $data]);
+    }
+
+    public function hyperpayAction(Request $request): Response
+    {
+        try {
+            $query = $request->query->all();
+            $hyperpayService = $this->container->get('ahmedkhd.sylius_paymob_plugin.service.hyperpay');
+            $transactionStatus = $hyperpayService->getTransactionStatus($query);
+            if ($transactionStatus['result']['code'] === '000.100.110') {
+                $payment = $this->paymobService->getPaymentById($transactionStatus['ndc']);
+                $payment->setDetails(['status' => 'success', 'message' => "done"]);
+                $order = $this->paymobService->setPaymentState($payment,
+                    PaymentInterface::STATE_COMPLETED,
+                    OrderPaymentStates::STATE_PAID
+                );
+                return $this->redirectToRoute('sylius_shop_order_thank_you');
+            }
+            return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $order->getTokenValue()]);
+
+        }
+        catch (Exception $ex) {
+            return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $order->getTokenValue()]);
+        }
+    }
+
     public function doAction(Request $request): Response
     {
-        $this->log->emergency($request);
-
         try {
             $_GET_PARAMS = $request->query->all();
             $order = $this->paymobService->getOrder($_GET_PARAMS['order']);
-            if (is_null($order)){
+            if (is_null($order)) {
                 return $this->redirectToRoute('sylius_shop_invoice_thank_you');
             }
             if (!empty($_GET_PARAMS) && $_GET_PARAMS['success'] == 'true') {
@@ -58,7 +93,7 @@ class NotifyController extends AbstractController
                 return $this->redirectToRoute('sylius_shop_order_thank_you');
             }
             return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $order->getTokenValue()]);
-        } catch (\Exception $ex) {
+        } catch (Exception $ex) {
             $this->log->emergency($ex);
         }
     }
@@ -68,20 +103,20 @@ class NotifyController extends AbstractController
         try {
             $paymobResponse = \GuzzleHttp\json_decode($request->getContent());
             $response = false;
-            if ($paymobResponse->obj->api_source == "INVOICE" && $paymobResponse->obj->order->data->type =="credit" ) {
+            if ($paymobResponse->obj->api_source == "INVOICE" && $paymobResponse->obj->order->data->type == "credit") {
                 try {
                     $walletService = $this->get('workouse_digital_wallet.wallet_service');
 
-                    $credit = $paymobResponse->obj->order->data->amount_deserved;
+                    $credit = $paymobResponse->obj->order->amount_cents;
                     $email = $paymobResponse->obj->order->shipping_data->email;
 
                     $customerRepo = $this->getDoctrine()->getRepository(Customer::class);
                     $customer = $customerRepo->findOneBy(['email' => $email]);
-                    $walletService->addCreditToCustomer($customer  ,"by Paymob", [ "wallet"=>$credit , "expiredAt" => "01/01/2099" ]);
+                    $walletService->addCreditToCustomer($customer, "by Paymob", ["wallet" => $credit, "expiredAt" => "01/01/2099"]);
 
                     $response = true;
-                }catch (\Exception $exception){
-                    $this->log->emergency($exception);
+                } catch (Exception $exception) {
+                    dd($exception);
                 }
 
             } else if (
@@ -125,7 +160,7 @@ class NotifyController extends AbstractController
             $this->log->emergency("paymob callback");
             $this->log->emergency($request);
 
-        } catch (\Exception $ex) {
+        } catch (Exception $ex) {
             $this->log->emergency($request);
             $this->log->emergency($ex);
         }

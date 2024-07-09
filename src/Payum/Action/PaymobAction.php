@@ -1,25 +1,23 @@
 <?php
 
-declare (strict_types=1);
-
 namespace Ahmedkhd\SyliusPaymobPlugin\Payum\Action;
 
-use Ahmedkhd\SyliusPaymobPlugin\Payum\SyliusApi;
 use GuzzleHttp\Client;
+use App\Entity\Order\Order;
+use App\Entity\Payment\Payment;
 use GuzzleHttp\Exception\GuzzleException;
-use GuzzleHttp\Exception\RequestException;
-use Payum\Core\Action\ActionInterface;
-use Payum\Core\ApiAwareInterface;
-use Payum\Core\Exception\RequestNotSupportedException;
-use Payum\Core\Exception\UnsupportedApiException;
-use Payum\Core\Request\Capture;
 use Psr\Http\Message\ResponseInterface;
+use Sylius\Bundle\ResourceBundle\Doctrine\ORM\EntityRepository;
+use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
-use Sylius\Component\Core\Model\PaymentInterface as SyliusPaymentInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Ahmedkhd\SyliusPaymobPlugin\Services\AbstractService;
+use Payum\Core\Exception\RequestNotSupportedException;
+use Sylius\Component\Core\Model\PaymentInterface as SyliusPaymentInterface;
+use Ahmedkhd\SyliusPaymobPlugin\Payum\Action\CaptureAction;
 
-final class CaptureAction extends AbstractController implements ActionInterface, ApiAwareInterface
+final class PaymobAction extends AbstractService implements Action
 {
     /** @var Client */
     private $client;
@@ -30,33 +28,50 @@ final class CaptureAction extends AbstractController implements ActionInterface,
     /** @var array */
     private $headers;
 
-    private $paymentAction;
+    protected $paymentRepository;
 
-    public function __construct(Client $client, ContainerInterface $container)
+    public function __construct(ContainerInterface $container, EntityRepository $paymentRepository)
     {
-        parent::setContainer($container);
 
-        $this->paymentAction = $this->container->get('attar.sylius_paymob_plugin.service.paymob');
-
-        $this->client = $client;
+        $this->paymentRepository = $paymentRepository;
+        parent::__construct($container);
         $this->headers['headers'] = [
             'Accept' => '*/*',
             'Content-Type' => 'application/json',
         ];
     }
 
-    public function execute($request)
+    public function execute($request, $client, $api)
     {
+        $this->client = $client;
+        $this->api = $api;
+        /** @var SyliusPaymentInterface $payment */
+        $payment = $request->getModel();
+        $order = $payment->getOrder();
 
-        $this->paymentAction = $this->container->get("attar.sylius_paymob_plugin.service." . $request->getModel()->getMethod()->getCode());
-        $this->paymentAction->execute($request, $this->client, $this->api);
+        try {
+            $authToken = $this->authenticate();
+            $orderId = $this->createOrderId($payment, $authToken);
+            $paymentToken = $this->getPaymentKey($payment, $authToken, strval($orderId));
+            $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING]);
+            $payment->setPaymentGatewayOrderId((string)$orderId);
+            $this->getDoctrine()->getManager()->flush();
+            $iframeURL = "https://accept.paymobsolutions.com/api/acceptance/iframes/{$this->api->getIframe()}?payment_token={$paymentToken}";
+        } catch (RequestException $exception) {
+            $payment->setDetails(['status' => "failed", "message" => $exception->getMessage()]);
+            # set state to new to allow the user to retry the payment
+            $payment->setState(PaymentInterface::STATE_NEW);
+            return;
+        }
+
+        $this->api->doPayment($iframeURL);
     }
 
     public function supports($request): bool
     {
         return
-        $request instanceof Capture &&
-        $request->getModel() instanceof SyliusPaymentInterface;
+            $request instanceof Capture &&
+            $request->getModel() instanceof SyliusPaymentInterface;
     }
 
     public function setApi($api): void
