@@ -12,6 +12,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use GuzzleHttp\Psr7\Request as GuzzleRequest;
 use GuzzleHttp\Client;
+use Sylius\Component\Core\Model\PaymentMethod as BasePaymentMethod;
+use Payum\Core\ApiAwareInterface;
+use Sylius\Bundle\PayumBundle\Model\GatewayConfig as BaseGatewayConfig;
 
 final class HyperPayService extends AbstractService implements PaymobServiceInterface
 {
@@ -29,21 +32,30 @@ final class HyperPayService extends AbstractService implements PaymobServiceInte
 
     public function getTransactionStatus($resource)
     {
+        $em = $this->container->get('doctrine.orm.default_entity_manager');
+        $paymentRepo = $em->getRepository(BaseGatewayConfig::class);
+         $pay = $paymentRepo->findoneby([
+            'gatewayName' => $resource['method']
+         ]);
         try {
-            $headers = [
-                'Authorization' => 'Bearer OGFjN2E0Yzc5MDNhY2FjNTAxOTA0NTg4YTVkNTAyZDB8N0E2UWRHUWZza2NZUDIzYw==',
-                'Accept' => 'application/json',
-            ];
-            $request = new GuzzleRequest('GET', 'https://eu-test.oppwa.com' . $resource['resourcePath'] . '?entityId=8ac7a4c7903acac50190458a299902d8', $headers);
-            $res = ($this->client->send($request));
+        $headers = [
+            'Authorization' => 'Bearer ' . $pay->getConfig()['api_key'],
+            'Accept' => 'application/json',
+        ];
+        $request = new GuzzleRequest('GET', $pay->getConfig()['integration_id'] . $resource['resourcePath'] . '?entityId='.$pay->getConfig()['merchant_id'], $headers);
+           $res = ($this->client->send($request));
             return (json_decode($res->getBody()->getContents(), true));
         } catch (Exception $ex) {
-
+            
         }
-
     }
-
-
+    public function getHyperPayBaseUrl($method)
+    {
+        $em = $this->container->get('doctrine.orm.default_entity_manager');
+        $paymentRepo = $em->getRepository(BaseGatewayConfig::class);
+         $pay = $paymentRepo->findoneby([
+            'gatewayName' => $method
+         ]);
+        return $pay->getConfig()['integration_id'];
+    }
 }
-// https://eu-test.oppwa.com/v1/checkouts/349F544E1BB73F6FBB555BC83C1B34B7.uat01-vm-tx03/payment?entityId=8ac7a4c7903acac50190458a299902d8
-// https://eu-test.oppwa.com/v1/checkouts/349F544E1BB73F6FBB555BC83C1B34B7.uat01-vm-tx03/payment?entityId=8ac7a4c7903acac50190458a299902d8

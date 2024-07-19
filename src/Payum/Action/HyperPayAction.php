@@ -18,73 +18,78 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 final class HyperPayAction extends AbstractController implements Action
 {
-    /** @var Client */
-    private $client;
+      /** @var Client */
+  private $client;
 
-    /** @var SyliusApi */
-    private $api;
+  /** @var SyliusApi */
+  private $api;
 
-    /** @var array */
-    private $headers;
+  /** @var array */
+  private $headers;
 
-    /** @var ContainerInterface */
-    protected $container;
+  /** @var ContainerInterface */
+  protected $container;
 
+  private $token; 
 
-    protected $paymentRepository;
+  private $url;
 
-    public function __construct(ContainerInterface $container, EntityRepository $paymentRepository)
+  private $entityId;
+
+  protected $paymentRepository;
+
+    public function __construct(ContainerInterface $container ,EntityRepository $paymentRepository)
     {
-        parent::setContainer($container);
+      parent::setContainer($container);
 
-        $this->paymentRepository = $paymentRepository;
+      $this->paymentRepository = $paymentRepository;
         $this->headers['headers'] = [
             'Accept' => '*/*',
             'Content-Type' => 'application/json',
         ];
         $this->container = $container;
+       
     }
 
-    public function getcheckoutId($orderId, $cost)
+    private function prepareConfig($api)
     {
-        $client = new Client();
+      $this->token = $api->getApiKey();
+      $this->url = $api->getIntegrationId();
+      $this->entityId = $api->getMerchantId();
+    }
+
+    public function getcheckoutId($orderId , $cost)
+    {
+      $client = new Client();
         $headers = [
-            'Authorization' => 'Bearer OGFjN2E0Yzc5MDNhY2FjNTAxOTA0NTg4YTVkNTAyZDB8N0E2UWRHUWZza2NZUDIzYw==',
+          'Authorization' => "Bearer $this->token",
         ];
-        $options = [
-            'multipart' => [
-            ]];
-        $request = new GuzzleRequest('POST', "https://eu-test.oppwa.com/v1/checkouts?entityId=8ac7a4c7903acac50190458a299902d8&amount=$cost&currency=SAR&paymentType=DB&merchantTransactionId=$orderId", $headers);
-        $res = $client->sendAsync($request, $options)->wait();
-        return (json_decode($res->getBody()->getContents(), true));
+        
+        $request = new GuzzleRequest('POST', "$this->url/v1/checkouts?entityId=$this->entityId&amount=$cost&currency=SAR&paymentType=DB&merchantTransactionId=$orderId", $headers);
+        $res = $client->sendAsync($request, [])->wait();
+        return (json_decode($res->getBody()->getContents() , true));
     }
-
-    public function execute($request, $client, $api)
+    public function execute($request , $client , $api)
     {
+        $this->prepareConfig($api);
         $this->client = $client;
         $this->api = $api;
 
-        /** @var SyliusPaymentInterface $payment */
         $payment = $request->getModel();
-
-
         $order = $payment->getOrder();
-        if ($order->getPromotionCoupon() != null) {
-            if (in_array((string)$order->getPromotionCoupon()->getPromotion()->getId(), $ids) && $payment->getMethod()->getCode() != 'CIB') {
-                return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $payment->getOrder()->getTokenValue()]);
-            }
-        }
+
         try {
-            $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING]);
-            $paymentToken = $this->getcheckoutId($order->getId(), number_format($payment->getOrder()->getTotal() / 100, 2));
+            $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING ]);
+            $paymentToken = $this->getcheckoutId($order->getId() , number_format($payment->getOrder()->getTotal() / 100, 2));
             $payment->setPaymentGatewayOrderId($paymentToken['ndc']);
-            $iframeURL = $this->api->getIframe() . "?payment_token={$paymentToken['id']}";
+            $iframeURL = $this->api->getIframe() . "?payment_token={$paymentToken['id']}" ."&method={$payment->getMethod()->getCode()}";
             $this->getDoctrine()->getManager()->flush();
             $this->api->doPayment($iframeURL);
         } catch (RequestException $exception) {
-             $payment->setDetails(['status' => "failed", "message" => $exception->getMessage()]);
+            $payment->setDetails(['status' => "failed", "message" => $exception->getMessage()]);
+            $payment->setState(PaymentInterface::STATE_NEW);
             return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $payment->getOrder()->getTokenValue()]);
         }
-
+        
     }
 }
