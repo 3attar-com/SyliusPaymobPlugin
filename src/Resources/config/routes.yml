@@ -4,8 +4,25 @@ ahmedkhd_sylius_paymob_plugin_notify_url:
   defaults:
     _controller: Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:doAction
 
+hyper_pay_Action:
+  path: /payment/hyperpay/capture
+  methods: [GET]
+  defaults:
+    _controller: Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:hyperpayAction
+
+
+
 ahmedkhd_sylius_paymob_plugin_notify_url_webhook:
   path: /payment/paymob/webhook
   methods: [POST]
   defaults:
     _controller: Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:webhookAction
+
+
+hyperpay:
+  path: /hyperpay
+  methods: [GET]
+  defaults:
+    _controller: Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:hyperpay
+
+

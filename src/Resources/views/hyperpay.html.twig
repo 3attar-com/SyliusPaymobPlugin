@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title> wellpal</title>
+</head>
+<body>
+    <form action="{{ data.url }}" class="paymentWidgets" data-brands="VISA MASTER MADA"></form>
+    
+    <script src="https://eu-test.oppwa.com/v1/paymentWidgets.js?checkoutId={{ data.payment_id }}"></script>
+
+    <script type="text/javascript"> 
+        var wpwlOptions = {
+        paymentTarget: "_top",
+        }
+    </script>
+</body>
+</html>

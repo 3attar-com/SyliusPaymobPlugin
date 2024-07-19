@@ -14,6 +14,7 @@ use Sylius\Component\Core\OrderPaymentStates;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class NotifyController extends AbstractController
 {
@@ -30,7 +31,7 @@ class NotifyController extends AbstractController
 
     /** @var OrderEmailManagerInterface */
     private $orderEmailManager;
-
+    
     public function __construct(
         Payum $payum,
         PaymobServiceInterface $paymobService,
@@ -43,10 +44,48 @@ class NotifyController extends AbstractController
         $this->orderEmailManager = $orderEmailManager;
     }
 
+     /**
+     * @Route("/hyperpay", name="hyperpay")
+     */
+    // hyperpay iframe
+    public function hyperpay(Request $request): Response
+    {
+        $hyperpayService = $this->container->get('ahmedkhd.sylius_paymob_plugin.service.hyperpay');
+        $data = [
+            'payment_id' => $request->query->all()['payment_token'],
+            'url' => $request->getSchemeAndHttpHost() . "/payment/hyperpay/capture?method={$request->query->all()['method']}",
+            'script_url' => "https://eu-test.oppwa.com"
+        ];
+        return $this->render('@AhmedkhdSyliusPaymobPlugin/hyperpay.html.twig', ['data' => $data]);
+    }
+
+    public function hyperpayAction(Request $request): Response
+    {
+        try {
+            $query = $request->query->all();
+            $hyperpayService = $this->container->get('ahmedkhd.sylius_paymob_plugin.service.hyperpay');
+            $transactionStatus = $hyperpayService->getTransactionStatus($query);
+            if($transactionStatus['result']['code'] === '000.100.110') {
+                $payment = $this->paymobService->getPaymentById($transactionStatus['ndc']);
+                $payment->setDetails(['status' => 'success', 'message' => "done"]);
+                $order = $this->paymobService->setPaymentState($payment,
+                    PaymentInterface::STATE_COMPLETED,
+                    OrderPaymentStates::STATE_PAID
+                );
+                return $this->redirectToRoute('sylius_shop_order_thank_you');
+            }
+            if (!empty($_GET_PARAMS) && $_GET_PARAMS['success'] == 'true') {
+                $this->orderEmailManager->sendConfirmationEmail($order);
+                return $this->redirectToRoute('sylius_shop_order_thank_you');
+            }
+            return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $order->getTokenValue()]);
+        } catch (\Exception $ex) {
+            dd($ex->getmessage());
+            $this->log->emergency($ex);
+        }
+    }
     public function doAction(Request $request): Response
     {
-        $this->log->emergency($request);
-
         try {
             $_GET_PARAMS = $request->query->all();
             $order = $this->paymobService->getOrder($_GET_PARAMS['order']);
@@ -72,12 +111,12 @@ class NotifyController extends AbstractController
                 try {
                     $walletService = $this->get('workouse_digital_wallet.wallet_service');
 
-                    $credit = $paymobResponse->obj->order->data->amount_deserved;
+                    $credit = $paymobResponse->obj->order->amount_cents;
                     $email = $paymobResponse->obj->order->shipping_data->email;
 
                     $customerRepo = $this->getDoctrine()->getRepository(Customer::class);
                     $customer = $customerRepo->findOneBy(['email' => $email]);
-                    $walletService->addCreditToCustomer($customer  ,"by Paymob", [ "wallet"=>$credit , "expiredAt" => "01/01/2099" ]);
+                    $walletService->addCreditToCustomer($customer  ,"by Paymob", [ "wallet"=> $credit , "expiredAt" => "01/01/2099" ]);
 
                     $response = true;
                 }catch (\Exception $exception){
