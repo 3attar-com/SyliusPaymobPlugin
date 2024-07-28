@@ -30,7 +30,7 @@ final class HyperPayAction extends AbstractController implements Action
   /** @var ContainerInterface */
   protected $container;
 
-  private $token; 
+  private $token;
 
   private $url;
 
@@ -48,7 +48,7 @@ final class HyperPayAction extends AbstractController implements Action
             'Content-Type' => 'application/json',
         ];
         $this->container = $container;
-       
+
     }
 
     private function prepareConfig($api)
@@ -64,8 +64,23 @@ final class HyperPayAction extends AbstractController implements Action
         $headers = [
           'Authorization' => "Bearer $this->token",
         ];
-        
-        $request = new GuzzleRequest('POST', "$this->url/v1/checkouts?entityId=$this->entityId&amount=$cost&currency=SAR&paymentType=DB&merchantTransactionId=$orderId", $headers);
+        $queryParams = [
+            'entityId' => $this->entityId,
+            'amount' => $cost,
+            'currency' => 'SAR',
+            'paymentType' => 'DB',
+            'merchantTransactionId' => $order->getId(),
+            'customer.email' => $order->getCustomer()->getEmail() ?? "NA",
+            'billing.street1' => $order->getBillingAddress()->getStreet() ?? "NA",
+            'billing.city' => $order->getBillingAddress()->getCity() ?? "NA",
+            'billing.state' => $order->getBillingAddress()->getProvinceName() ?? "NA",
+            'billing.country' => $order->getBillingAddress()->getCountryCode() ?? "NA",
+            'billing.postcode' => $order->getBillingAddress()->getPostcode() ?? "NA",
+            'customer.givenName' => $order->getCustomer()->getFullName() ?? "NA",
+            'customer.mobile' => $order->getCustomer()->getPhoneNumber() ?? "NA"
+        ];
+        $urlWithParams = $this->url . '/v1/checkouts?' . http_build_query($queryParams);
+        $request = new GuzzleRequest('POST', $urlWithParams, $headers);
         $res = $client->sendAsync($request, [])->wait();
         return (json_decode($res->getBody()->getContents() , true));
     }
@@ -90,6 +105,6 @@ final class HyperPayAction extends AbstractController implements Action
             $payment->setState(PaymentInterface::STATE_NEW);
             return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $payment->getOrder()->getTokenValue()]);
         }
-        
+
     }
 }
