@@ -58,7 +58,7 @@ final class HyperPayAction extends AbstractController implements Action
       $this->entityId = $api->getMerchantId();
     }
 
-    public function getcheckoutId($orderId , $cost)
+    public function getcheckoutId($order , $cost)
     {
       $client = new Client();
         $headers = [
@@ -95,7 +95,7 @@ final class HyperPayAction extends AbstractController implements Action
 
         try {
             $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING ]);
-            $paymentToken = $this->getcheckoutId($order->getId() , number_format($payment->getOrder()->getTotal() / 100, 2));
+            $paymentToken = $this->getcheckoutId($order , number_format($payment->getOrder()->getTotal() / 100, 2));
             $payment->setPaymentGatewayOrderId($paymentToken['ndc']);
             $iframeURL = $this->api->getIframe() . "?payment_token={$paymentToken['id']}" ."&method={$payment->getMethod()->getCode()}";
             $this->getDoctrine()->getManager()->flush();
