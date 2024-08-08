@@ -31,7 +31,7 @@ class NotifyController extends AbstractController
 
     /** @var OrderEmailManagerInterface */
     private $orderEmailManager;
-    
+
     public function __construct(
         Payum $payum,
         PaymobServiceInterface $paymobService,
@@ -65,23 +65,20 @@ class NotifyController extends AbstractController
             $query = $request->query->all();
             $hyperpayService = $this->container->get('ahmedkhd.sylius_paymob_plugin.service.hyperpay');
             $transactionStatus = $hyperpayService->getTransactionStatus($query);
-            if($transactionStatus['result']['code'] === '000.100.110') {
+            if($transactionStatus && $transactionStatus['result']['code'] === '000.100.110') {
                 $payment = $this->paymobService->getPaymentById($transactionStatus['ndc']);
                 $payment->setDetails(['status' => 'success', 'message' => "done"]);
                 $order = $this->paymobService->setPaymentState($payment,
                     PaymentInterface::STATE_COMPLETED,
                     OrderPaymentStates::STATE_PAID
                 );
-                return $this->redirectToRoute('sylius_shop_order_thank_you');
-            }
-            if (!empty($_GET_PARAMS) && $_GET_PARAMS['success'] == 'true') {
                 $this->orderEmailManager->sendConfirmationEmail($order);
                 return $this->redirectToRoute('sylius_shop_order_thank_you');
             }
-            return $this->redirectToRoute('sylius_shop_order_show', ['tokenValue' => $order->getTokenValue()]);
+            return $this->redirectToRoute('payment_failure');
         } catch (\Exception $ex) {
-            dd($ex->getmessage());
             $this->log->emergency($ex);
+            return $this->redirectToRoute('payment_failure');
         }
     }
     public function doAction(Request $request): Response
