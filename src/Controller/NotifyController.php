@@ -50,13 +50,14 @@ class NotifyController extends AbstractController
     // hyperpay iframe
     public function hyperpay(Request $request): Response
     {
+        $method = $request->query->all()['method'];
         $hyperpayService = $this->container->get('ahmedkhd.sylius_paymob_plugin.service.hyperpay');
         $data = [
             'payment_id' => $request->query->all()['payment_token'],
-            'url' => $request->getSchemeAndHttpHost() . "/payment/hyperpay/capture?method={$request->query->all()['method']}",
+            'url' => $request->getSchemeAndHttpHost() . "/payment/hyperpay/capture?method={$method}",
             'script_url' => "https://eu-test.oppwa.com"
         ];
-        return $this->render('@AhmedkhdSyliusPaymobPlugin/hyperpay.html.twig', ['data' => $data]);
+        return $this->render('@AhmedkhdSyliusPaymobPlugin/'.$method.'.html.twig', ['data' => $data]);
     }
 
     public function hyperpayAction(Request $request): Response

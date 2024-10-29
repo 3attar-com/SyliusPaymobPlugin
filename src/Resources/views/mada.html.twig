@@ -2,28 +2,34 @@
 <html>
 <head>
     <title> wellpal</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-<style>
-    .wpwl-group-brand {
-        display: none;
-    }
-</style>
-<form action="{{ data.url }}" class="paymentWidgets" data-brands="VISA MASTER"></form>
+<form action="{{ data.url }}" class="paymentWidgets" data-brands="MADA"></form>
 
 <script src="https://eu-test.oppwa.com/v1/paymentWidgets.js?checkoutId={{ data.payment_id }}"></script>
 <script src="https://code.jquery.com/jquery.js" type="text/javascript"></script>
 
 <script type="text/javascript">
+    console.log("dsadsa");
     var wpwlOptions = {
-        style:"card",
-        brandDetection: false,
         paymentTarget: "_top",
+        style:"card",
         onReady: function(e){
             $('.wpwl-form-card').find('.wpwl-button-pay').on('click', function(e){
                 console.log("dsadsa");
                 validateHolder(e);
+            });
+            $('.wpwl-control-cardHolder').on('input', function () {
+                this.value = this.value.replace(/[0-9]/g, '');
+            });
+            $('input[name="card.number"]').on('input', function() {
+                let inputVal = $(this).val().replace(/\D/g, '');
+                if (inputVal.length > 14) {
+                    inputVal = inputVal.substring(0, 14);
+                }
+
+                // Set the processed value back to the input
+                $(this).val(inputVal);
             });
         },
         onBeforeSubmitCard: function(e){
