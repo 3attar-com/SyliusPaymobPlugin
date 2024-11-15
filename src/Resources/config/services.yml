@@ -55,6 +55,7 @@ services:
       - '@ahmedkhd.sylius_paymob_plugin.service.paymob'
       - '@monolog.logger'
       - '@sylius.email_manager.order'
+      - '@event_dispatcher'
 
 #      - '@router'
 #      - '@be_happy_rights_management.repository.right'

@@ -6,8 +6,10 @@ use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobService;
 use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobServiceInterface;
 use App\Entity\Customer\Customer;
 use App\Entity\Order\Order;
+use App\Entity\Payment\Payment;
 use Monolog\Logger;
 use Payum\Core\Payum;
+use Sylius\Bundle\ResourceBundle\Event\ResourceControllerEvent;
 use Sylius\Bundle\ShopBundle\EmailManager\OrderEmailManagerInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
 use Sylius\Component\Core\OrderPaymentStates;
@@ -15,6 +17,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface as SymfonyEventDispatcherInterface;
 
 class NotifyController extends AbstractController
 {
@@ -32,16 +35,20 @@ class NotifyController extends AbstractController
     /** @var OrderEmailManagerInterface */
     private $orderEmailManager;
 
+    private $eventDispatcher;
+
     public function __construct(
         Payum $payum,
         PaymobServiceInterface $paymobService,
         Logger $log,
-        OrderEmailManagerInterface $orderEmailManager
+        OrderEmailManagerInterface $orderEmailManager,
+        SymfonyEventDispatcherInterface $eventDispatcher
     ) {
         $this->payum = $payum;
         $this->paymobService = $paymobService;
         $this->log = $log;
         $this->orderEmailManager = $orderEmailManager;
+        $this->eventDispatcher = $eventDispatcher;
     }
 
      /**
@@ -73,6 +80,7 @@ class NotifyController extends AbstractController
                     PaymentInterface::STATE_COMPLETED,
                     OrderPaymentStates::STATE_PAID
                 );
+                $this->dispatch($order);
                 $this->orderEmailManager->sendConfirmationEmail($order);
                 return $this->redirectToRoute('sylius_shop_order_thank_you');
             }
@@ -168,5 +176,10 @@ class NotifyController extends AbstractController
         }
 
         return new Response(\GuzzleHttp\json_encode(['success' => $response]), $response ? 200 : 400);
+    }
+
+    private function dispatch($resource)  {
+        $event = new ResourceControllerEvent($resource);
+        $this->eventDispatcher->dispatch($event, 'sylius.payment.post_complete');
     }
 }
