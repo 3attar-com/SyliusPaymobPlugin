@@ -109,12 +109,12 @@ class NotifyController extends AbstractController
                     'Content-Type' => 'text/xml'
                 ]);
             }
-            return new Response('failed', 500, [
+            return new Response('failed', 400, [
                 'Content-Type' => 'text/xml'
             ]);
         } catch (\Exception $ex) {
             $this->log->emergency($ex);
-            return new Response('failed', 500, [
+            return new Response($ex->getMessage(), 400, [
                 'Content-Type' => 'text/xml'
             ]);
         }
