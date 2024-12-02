@@ -51,7 +51,7 @@ class NotifyController extends AbstractController
         $this->eventDispatcher = $eventDispatcher;
     }
 
-    /**
+     /**
      * @Route("/hyperpay", name="hyperpay")
      */
     // hyperpay iframe
@@ -75,7 +75,7 @@ class NotifyController extends AbstractController
             $query = $request->query->all();
             $hyperpayService = $this->container->get('ahmedkhd.sylius_paymob_plugin.service.hyperpay');
             $transactionStatus = $hyperpayService->getTransactionStatus($query);
-            if($transactionStatus && $transactionStatus['result']['code'] === '000.100.110') {
+            if($transactionStatus && $transactionStatus['payload']['result']['code'] === '000.000.000') {
                 $payment = $this->paymobService->getPaymentById($transactionStatus['ndc']);
                 $payment->setDetails(['status' => 'success', 'message' => "done"]);
                 $order = $this->paymobService->setPaymentState($payment,
@@ -90,6 +90,33 @@ class NotifyController extends AbstractController
         } catch (\Exception $ex) {
             $this->log->emergency($ex);
             return $this->redirectToRoute('payment_failure');
+        }
+    }
+    public function hyperpayWebhookAction(Request $request)
+    {
+        $request = ($request->toArray());
+        try {
+            if($request['type'] === 'PAYMENT' && $request['payload']['result']['code'] === '000.000.000') {
+                $payment = $this->paymobService->getPaymentById($request['payload']['ndc']);
+                $payment->setDetails(['status' => 'success', 'message' => "done"]);
+                $order = $this->paymobService->setPaymentState($payment,
+                    PaymentInterface::STATE_COMPLETED,
+                    OrderPaymentStates::STATE_PAID
+                );
+                $this->dispatch($order);
+                $this->orderEmailManager->sendConfirmationEmail($order);
+                return new Response('success', 200, [
+                    'Content-Type' => 'text/xml'
+                ]);
+            }
+            return new Response('failed', 400, [
+                'Content-Type' => 'text/xml'
+            ]);
+        } catch (\Exception $ex) {
+            $this->log->emergency($ex);
+            return new Response($ex->getMessage(), 400, [
+                'Content-Type' => 'text/xml'
+            ]);
         }
     }
     public function doAction(Request $request): Response
