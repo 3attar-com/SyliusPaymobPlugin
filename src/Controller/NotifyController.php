@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface as SymfonyEventDispatcherInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 class NotifyController extends AbstractController
 {
@@ -37,18 +38,23 @@ class NotifyController extends AbstractController
 
     private $eventDispatcher;
 
+    private $parameterBag;
+
+    
     public function __construct(
         Payum $payum,
         PaymobServiceInterface $paymobService,
         Logger $log,
         OrderEmailManagerInterface $orderEmailManager,
-        SymfonyEventDispatcherInterface $eventDispatcher
+        SymfonyEventDispatcherInterface $eventDispatcher,
+        ParameterBagInterface $parameterBag
     ) {
         $this->payum = $payum;
         $this->paymobService = $paymobService;
         $this->log = $log;
         $this->orderEmailManager = $orderEmailManager;
         $this->eventDispatcher = $eventDispatcher;
+        $this->parameterBag = $parameterBag;
     }
 
      /**
@@ -92,11 +98,39 @@ class NotifyController extends AbstractController
             return $this->redirectToRoute('payment_failure');
         }
     }
+    
     public function hyperpayWebhookAction(Request $request)
     {
-        $request = ($request->toArray());
+        $http_body = file_get_contents('php://input');
+        $key_from_configration = $this->parameterBag->get("HYPERPAY_SECRET_KEY");
+        $headers = getallheaders();
+        $iv_from_http_header = $headers['X-Initialization-Vector'];
+        $auth_tag_from_http_header = $headers['X-Authentication-Tag'];
+        $http=json_decode($http_body);
+        $body = $http_body;
+        $key = hex2bin($key_from_configration);
+        $iv = hex2bin($iv_from_http_header);
+        $auth_tag = hex2bin($auth_tag_from_http_header);
+        $cipher_text = hex2bin($body);
+        $result = openssl_decrypt($cipher_text, "aes-256-gcm", $key, OPENSSL_RAW_DATA, $iv, $auth_tag);
+        $result = json_decode($result, true);
+
+
+        $this->log->emergency('Request details', [
+            'method' => $request->getMethod(),
+            'headers' => $request->headers->all(),
+            'path' => $request->getPathInfo(),
+            'query' => $request->query->all(),
+            'body' => $request->request->all(),
+            'file' => $http_body,
+            'http' => $http,
+            'iv_from_http_header' => $headers['X-Initialization-Vector'],
+            'auth_tag_from_http_header' => $headers['X-Authentication-Tag'],
+            'result' => $result
+        ]);
+
         try {
-            if($request['type'] === 'PAYMENT' && $request['payload']['result']['code'] === '000.000.000') {
+            if($result['type'] === 'PAYMENT' && $result['payload']['result']['code'] === '000.000.000') {
                 $payment = $this->paymobService->getPaymentById($request['payload']['ndc']);
                 $payment->setDetails(['status' => 'success', 'message' => "done"]);
                 $order = $this->paymobService->setPaymentState($payment,
@@ -104,7 +138,7 @@ class NotifyController extends AbstractController
                     OrderPaymentStates::STATE_PAID
                 );
                 $this->dispatch($order);
-                $this->orderEmailManager->sendConfirmationEmail($order);
+//                $this->orderEmailManager->sendConfirmationEmail($order);
                 return new Response('success', 200, [
                     'Content-Type' => 'text/xml'
                 ]);
@@ -119,6 +153,7 @@ class NotifyController extends AbstractController
             ]);
         }
     }
+
     public function doAction(Request $request): Response
     {
         try {
