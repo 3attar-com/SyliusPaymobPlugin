@@ -131,7 +131,7 @@ class NotifyController extends AbstractController
 
         try {
             if($result['type'] === 'PAYMENT' && $result['payload']['result']['code'] === '000.000.000') {
-                $payment = $this->paymobService->getPaymentById($request['payload']['ndc']);
+                $payment = $this->paymobService->getPaymentById($result['payload']['ndc']);
                 $payment->setDetails(['status' => 'success', 'message' => "done"]);
                 $order = $this->paymobService->setPaymentState($payment,
                     PaymentInterface::STATE_COMPLETED,
