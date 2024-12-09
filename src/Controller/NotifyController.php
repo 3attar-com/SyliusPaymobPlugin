@@ -116,7 +116,7 @@ class NotifyController extends AbstractController
         $result = json_decode($result, true);
 
 
-        $this->log->emergency('Request details', [
+        $this->log->info('Request details', [
             'method' => $request->getMethod(),
             'headers' => $request->headers->all(),
             'path' => $request->getPathInfo(),

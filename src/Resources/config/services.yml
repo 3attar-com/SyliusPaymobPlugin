@@ -53,7 +53,7 @@ services:
     arguments:
       - '@payum'
       - '@ahmedkhd.sylius_paymob_plugin.service.paymob'
-      - '@monolog.logger'
+      - '@monolog.logger.payment'
       - '@sylius.email_manager.order'
       - '@event_dispatcher'
       - '@parameter_bag'
