@@ -116,7 +116,7 @@ class NotifyController extends AbstractController
         $result = json_decode($result, true);
 
 
-        $this->log->emergency('Request details', [
+        $this->log->info('Request details', [
             'method' => $request->getMethod(),
             'headers' => $request->headers->all(),
             'path' => $request->getPathInfo(),
@@ -131,7 +131,7 @@ class NotifyController extends AbstractController
 
         try {
             if($result['type'] === 'PAYMENT' && $result['payload']['result']['code'] === '000.000.000') {
-                $payment = $this->paymobService->getPaymentById($request['payload']['ndc']);
+                $payment = $this->paymobService->getPaymentById($result['payload']['ndc']);
                 $payment->setDetails(['status' => 'success', 'message' => "done"]);
                 $order = $this->paymobService->setPaymentState($payment,
                     PaymentInterface::STATE_COMPLETED,
