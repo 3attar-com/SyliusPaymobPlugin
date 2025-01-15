@@ -115,18 +115,14 @@ class NotifyController extends AbstractController
         $result = openssl_decrypt($cipher_text, "aes-256-gcm", $key, OPENSSL_RAW_DATA, $iv, $auth_tag);
         $result = json_decode($result, true);
 
+        $logData = $result['payload'];
+        unset($logData['risk']);
+        unset($logData['redirect']);
+        unset($logData['authentication']);
+        unset($logData['shortId']);
 
         $this->log->info('Request details', [
-            'method' => $request->getMethod(),
-            'headers' => $request->headers->all(),
-            'path' => $request->getPathInfo(),
-            'query' => $request->query->all(),
-            'body' => $request->request->all(),
-            'file' => $http_body,
-            'http' => $http,
-            'iv_from_http_header' => $headers['X-Initialization-Vector'],
-            'auth_tag_from_http_header' => $headers['X-Authentication-Tag'],
-            'result' => $result
+            'result' => $logData
         ]);
 
         try {
