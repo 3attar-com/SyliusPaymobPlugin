@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title> wellpal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<form action="{{ data.url }}" class="paymentWidgets" data-brands="TAMARA"></form>
+
+<script src="{{ data.script_url }}"></script>
+<script src="https://code.jquery.com/jquery.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+    var wpwlOptions = {
+        paymentTarget: "_top",
+        style:"card",
+        onReady: function(e){
+            $('.wpwl-form-card').find('.wpwl-button-pay').on('click', function(e){
+                console.log("dsadsa");
+                validateHolder(e);
+            });
+            $('.wpwl-control-cardHolder').on('input', function () {
+                this.value = this.value.replace(/[0-9]/g, '');
+            });
+            $('input[name="card.number"]').on('input', function() {
+                let inputVal = $(this).val().replace(/\D/g, '');
+                if (inputVal.length > 14) {
+                    inputVal = inputVal.substring(0, 14);
+                }
+
+                // Set the processed value back to the input
+                $(this).val(inputVal);
+            });
+        },
+        onBeforeSubmitCard: function(e){
+            return validateHolder(e);
+        }
+    }
+    function validateHolder(e){
+        var holder = $('.wpwl-control-cardHolder').val();
+        if (holder.trim().length < 2){
+            $('.wpwl-control-cardHolder').addClass('wpwl-has-error').after('<div class="wpwl-hint wpwl-hint-cardHolderError">Invalid card holder</div>');
+            return false;
+        }
+        return true;
+    }
+</script>
+</body>
+</html>
