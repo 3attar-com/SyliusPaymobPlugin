@@ -50,7 +50,7 @@ final class CaptureAction extends AbstractController implements ActionInterface,
     public function supports($request): bool
     {
         return $request instanceof Capture &&
-        request->getModel() instanceof SyliusPaymentInterface;
+        $request->getModel() instanceof SyliusPaymentInterface;
     }
 
     public function setApi($api): void
