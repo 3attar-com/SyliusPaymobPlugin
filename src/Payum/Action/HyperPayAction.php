@@ -4,6 +4,7 @@ namespace Ahmedkhd\SyliusPaymobPlugin\Payum\Action;
 
 use App\Entity\Order\Order;
 use App\Entity\Payment\Payment;
+use Doctrine\ORM\Mapping\Driver\DatabaseDriver;
 use Sylius\Bundle\ResourceBundle\Doctrine\ORM\EntityRepository;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
@@ -16,53 +17,52 @@ use GuzzleHttp\Client;
 use Ahmedkhd\SyliusPaymobPlugin\Payum\Action\CaptureAction;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-final class HyperPayAction extends AbstractController implements Action
+final class HyperPayAction implements Action
 {
-      /** @var Client */
-  private $client;
+    /** @var Client */
+    private $client;
 
-  /** @var SyliusApi */
-  private $api;
+    /** @var SyliusApi */
+    private $api;
 
-  /** @var array */
-  private $headers;
+    /** @var array */
+    private $headers;
 
-  /** @var ContainerInterface */
-  protected $container;
+    /** @var ContainerInterface */
+    protected $container;
 
-  private $token;
+    private $token;
 
-  private $url;
+    private $url;
 
-  private $entityId;
+    private $entityId;
 
-  protected $paymentRepository;
+    protected $paymentRepository;
+    protected $entityManager;
 
-    public function __construct(ContainerInterface $container ,EntityRepository $paymentRepository)
+    public function __construct(ContainerInterface $container, EntityRepository $paymentRepository)
     {
-      parent::setContainer($container);
-
-      $this->paymentRepository = $paymentRepository;
+        $this->paymentRepository = $paymentRepository;
         $this->headers['headers'] = [
             'Accept' => '*/*',
             'Content-Type' => 'application/json',
         ];
         $this->container = $container;
-
+        $this->entityManager = $this->container->get('doctrine')->getManager();
     }
 
     private function prepareConfig($api)
     {
-      $this->token = $api->getApiKey();
-      $this->url = $api->getIntegrationId();
-      $this->entityId = $api->getMerchantId();
+        $this->token = $api->getAuthToken();
+        $this->url = $api->getDomain();
+        $this->entityId = $api->getEntityId();
     }
 
-    public function getcheckoutId($order , $cost)
+    public function getcheckoutId($order, $cost)
     {
-      $client = new Client();
+        $client = new Client();
         $headers = [
-          'Authorization' => "Bearer $this->token",
+            'Authorization' => "Bearer $this->token",
         ];
         $queryParams = [
             'entityId' => $this->entityId,
@@ -82,9 +82,10 @@ final class HyperPayAction extends AbstractController implements Action
         $urlWithParams = $this->url . '/v1/checkouts?' . http_build_query($queryParams);
         $request = new GuzzleRequest('POST', $urlWithParams, $headers);
         $res = $client->sendAsync($request, [])->wait();
-        return (json_decode($res->getBody()->getContents() , true));
+        return (json_decode($res->getBody()->getContents(), true ));
     }
-    public function execute($request , $client , $api)
+
+    public function execute($request, $client, $api)
     {
         $this->prepareConfig($api);
         $this->client = $client;
@@ -94,11 +95,11 @@ final class HyperPayAction extends AbstractController implements Action
         $order = $payment->getOrder();
 
         try {
-            $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING ]);
-            $paymentToken = $this->getcheckoutId($order , number_format($payment->getOrder()->getTotal() / 100, 2));
+            $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING]);
+            $paymentToken = $this->getcheckoutId($order, number_format($payment->getOrder()->getTotal() / 100, 2));
             $payment->setPaymentGatewayOrderId($paymentToken['ndc']);
-            $iframeURL = $this->api->getIframe() . "?payment_token={$paymentToken['id']}" ."&method={$payment->getMethod()->getCode()}";
-            $this->getDoctrine()->getManager()->flush();
+            $iframeURL = $this->api->getIframeUrl() . "?payment_token={$paymentToken['id']}" . "&method={$payment->getMethod()->getCode()}";
+            $this->entityManager->flush();
             $this->api->doPayment($iframeURL);
         } catch (RequestException $exception) {
             $payment->setDetails(['status' => "failed", "message" => $exception->getMessage()]);
