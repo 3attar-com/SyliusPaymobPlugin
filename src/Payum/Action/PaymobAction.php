@@ -100,57 +100,31 @@ final class PaymobAction implements Action
 
     }
 
-    public function execute1($request, $client, $api)
-    {
-        $this->client = $client;
-        $this->api = $api;
-        /** @var SyliusPaymentInterface $payment */
-        $payment = $request->getModel();
-        $order = $payment->getOrder();
 
-        try {
-//          $authToken = $this->authenticate();
-//          $orderId = $this->createOrderId($payment, $authToken);
-//          $paymentToken = $this->getPaymentKey($payment, $authToken, strval($orderId));
-//          $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING ]);
-//          $payment->setPaymentGatewayOrderId((string)$orderId);
-//          $this->entityManager->flush();
-//          $iframeURL = "https://accept.paymobsolutions.com/api/acceptance/iframes/{$this->api->getIframe()}?payment_token={$paymentToken}";
-        } catch (RequestException $exception) {
-            $payment->setDetails(['status' => "failed", "message" => $exception->getMessage()]);
-            # set state to new to allow the user to retry the payment
-            $payment->setState(PaymentInterface::STATE_NEW);
-            return;
-        }
-
-        $this->api->doPayment($iframeURL);
-    }
-
-    public function execute_old($request, $client, $api)
-    {
-        $this->client = $client;
-        $this->api = $api;
-        /** @var SyliusPaymentInterface $payment */
-        $payment = $request->getModel();
-        $order = $payment->getOrder();
-
-        try {
-            $authToken = $this->authenticate();
-            $orderId = $this->createOrderId($payment, $authToken);
-            $paymentToken = $this->getPaymentKey($payment, $authToken, strval($orderId));
-            $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING]);
-            $payment->setPaymentGatewayOrderId((string)$orderId);
-            $this->entityManager->flush();
-            $iframeURL = "https://accept.paymobsolutions.com/api/acceptance/iframes/{$this->api->getIframe()}?payment_token={$paymentToken}";
-        } catch (RequestException $exception) {
-            $payment->setDetails(['status' => "failed", "message" => $exception->getMessage()]);
-            # set state to new to allow the user to retry the payment
-            $payment->setState(PaymentInterface::STATE_NEW);
-            return;
-        }
-
-        $this->api->doPayment($iframeURL);
-    }
+//    public function execute_old($request, $client, $api)
+//    {
+//        $this->client = $client;
+//        $this->api = $api;
+//        /** @var SyliusPaymentInterface $payment */
+//        $payment = $request->getModel();
+//        $order = $payment->getOrder();
+//
+//        try {
+//            $authToken = $this->authenticate();
+//            $orderId = $this->createOrderId($payment, $authToken);
+//            $paymentToken = $this->getPaymentKey($payment, $authToken, strval($orderId));
+//            $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING]);
+//            $payment->setPaymentGatewayOrderId((string)$orderId);
+//            $this->entityManager->flush();
+//            $iframeURL = "https://accept.paymobsolutions.com/api/acceptance/iframes/{$this->api->getIframe()}?payment_token={$paymentToken}";
+//        } catch (RequestException $exception) {
+//            $payment->setDetails(['status' => "failed", "message" => $exception->getMessage()]);
+//            # set state to new to allow the user to retry the payment
+//            $payment->setState(PaymentInterface::STATE_NEW);
+//            return;
+//        }
+//        $this->api->doPayment($iframeURL);
+//    }
 
     public function supports($request): bool
     {
