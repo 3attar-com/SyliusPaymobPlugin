@@ -5,7 +5,7 @@ services:
     tags:
       - { name: payum.gateway_factory_builder, factory: paymob }
 
-  Ahmedkhd\SyliusPaymobPlugin\Form\Type\SyliusGatewayConfigurationType:
+  Ahmedkhd\SyliusPaymobPlugin\Form\Type\PaymobGatewayConfigurationType:
     tags:
       - { name: sylius.gateway_configuration_type, type: paymob, label: "Paymob" }
       - { name: form.type }
@@ -16,7 +16,7 @@ services:
     tags:
       - { name: payum.gateway_factory_builder, factory: hyperpay }
 
-  Ahmedkhd\SyliusPaymobPlugin\Form\Type\SyliusGatewayConfigurationTypeHyperPay:
+  Ahmedkhd\SyliusPaymobPlugin\Form\Type\HyperPayGatewayConfigurationType:
     tags:
       - { name: sylius.gateway_configuration_type, type: hyperpay, label: "Hyperpay" }
       - { name: form.type }

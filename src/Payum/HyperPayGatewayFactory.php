@@ -19,7 +19,7 @@ final class HyperPayGatewayFactory extends GatewayFactory
         ]);
 
         $config['payum.api'] = function (ArrayObject $config) {
-            return new SyliusApiHyperPay(
+            return new HyperPayApi(
                 $config['authToken'],
                 $config['entityId'],
                 $config['iframe_url'],

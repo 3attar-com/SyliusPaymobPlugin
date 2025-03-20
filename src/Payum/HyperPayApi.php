@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Ahmedkhd\SyliusPaymobPlugin\Payum;
 
 
-final class SyliusApiHyperPay implements SyliusPayumInterface
+final class HyperPayApi implements SyliusPayumInterface
 {
     /** @var string */
     private $authToken;

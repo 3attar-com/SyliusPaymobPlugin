@@ -13,7 +13,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Validator\Constraints\File;
 use Symfony\Component\Validator\Constraints\NotNull;
 
-final class SyliusGatewayConfigurationType extends AbstractType
+final class PaymobGatewayConfigurationType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
