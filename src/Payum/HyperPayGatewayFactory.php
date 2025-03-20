@@ -8,26 +8,22 @@ use Payum\Core\Bridge\Spl\ArrayObject;
 use Payum\Core\GatewayFactory;
 use Sylius\PayPalPlugin\Payum\Action\StatusAction;
 
-final class PaymobGatewayFactory extends GatewayFactory
+final class HyperPayGatewayFactory extends GatewayFactory
 {
     protected function populateConfig(ArrayObject $config): void
     {
         $config->defaults([
-            'payum.factory_name' => 'paymob',
-            'payum.factory_title' => 'Paymob',
+            'payum.factory_name' => 'hyperpay',
+            'payum.factory_title' => 'Hyperpay',
             'payum.action.status' => new StatusAction(),
         ]);
 
         $config['payum.api'] = function (ArrayObject $config) {
-            return new PaymobApi(
-                $config['secret_key'],
-                $config['hamc_security'],
-                $config['merchant_id'],
+            return new HyperPayApi(
+                $config['authToken'],
+                $config['entityId'],
                 $config['iframe_url'],
-                $config['integration_id'],
                 $config['domain'],
-                $config['notification_url'],
-                $config['redirection_url']
             );
         };
     }

@@ -5,9 +5,20 @@ services:
     tags:
       - { name: payum.gateway_factory_builder, factory: paymob }
 
-  Ahmedkhd\SyliusPaymobPlugin\Form\Type\SyliusGatewayConfigurationType:
+  Ahmedkhd\SyliusPaymobPlugin\Form\Type\PaymobGatewayConfigurationType:
     tags:
-      - { name: sylius.gateway_configuration_type, type: paymob, label: "Paymob Payment" }
+      - { name: sylius.gateway_configuration_type, type: paymob, label: "Paymob" }
+      - { name: form.type }
+
+  ahmedkhd.sylius_hyperpay_plugin.hyperpay:
+    class: Payum\Core\Bridge\Symfony\Builder\GatewayFactoryBuilder
+    arguments: [Ahmedkhd\SyliusPaymobPlugin\Payum\HyperPayGatewayFactory]
+    tags:
+      - { name: payum.gateway_factory_builder, factory: hyperpay }
+
+  Ahmedkhd\SyliusPaymobPlugin\Form\Type\HyperPayGatewayConfigurationType:
+    tags:
+      - { name: sylius.gateway_configuration_type, type: hyperpay, label: "Hyperpay" }
       - { name: form.type }
 
   Ahmedkhd\SyliusPaymobPlugin\Payum\Action\CaptureAction:
@@ -16,6 +27,7 @@ services:
     arguments: [ "@sylius.http_client" , "@service_container"]
     tags:
       - { name: payum.action, factory: paymob, alias: payum.action.capture }
+      - { name: payum.action, factory: hyperpay, alias: payum.action.capture }
 
   attar.sylius_paymob_plugin.service.paymob:
     class: Ahmedkhd\SyliusPaymobPlugin\Payum\Action\PaymobAction
@@ -36,16 +48,21 @@ services:
   ahmedkhd.sylius_paymob_plugin.service.paymob:
     class: Ahmedkhd\SyliusPaymobPlugin\Services\PaymobService
     public: true
-    arguments:
-      - '@service_container'
-      - '@sylius.repository.payment'
+    autowire: true
+    autoconfigure: true
+  #    arguments:
+  #      - '@service_container'
+  #      - '@sylius.repository.payment'
+  #      - '@sylius.repository.customer'
+  #      - '@monolog.logger.payment'
+
 
   ahmedkhd.sylius_paymob_plugin.service.hyperpay:
     class: Ahmedkhd\SyliusPaymobPlugin\Services\HyperPayService
     public: true
-    arguments:
-      - '@service_container'
-      - '@sylius.repository.payment'
+    autowire: true
+    autoconfigure: true
+
 
   Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:
     public: true

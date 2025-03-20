@@ -5,6 +5,7 @@ declare (strict_types = 1);
 namespace Ahmedkhd\SyliusPaymobPlugin\Payum\Action;
 
 use Ahmedkhd\SyliusPaymobPlugin\Payum\SyliusApi;
+use Ahmedkhd\SyliusPaymobPlugin\Payum\SyliusPayumInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Payum\Core\Action\ActionInterface;
@@ -42,22 +43,21 @@ final class CaptureAction extends AbstractController implements ActionInterface,
 
     public function execute($request)
     {
-        $this->paymentAction = $this->container->get("attar.sylius_paymob_plugin.service." .$request->getModel()->getMethod()->getCode());
+        $this->paymentAction = $this->container->get("attar.sylius_paymob_plugin.service." .$request->getModel()->getMethod()->getGatewayConfig()->getFactoryName());
         $this->paymentAction->execute($request , $this->client , $this->api);
     }
 
     public function supports($request): bool
     {
-       return $request instanceof Capture &&
-        $request->getModel() instanceof SyliusPaymentInterface;
+        return $request instanceof Capture &&
+        request->getModel() instanceof SyliusPaymentInterface;
     }
 
     public function setApi($api): void
     {
-        if (!$api instanceof SyliusApi) {
+        if (!$api instanceof SyliusPayumInterface) {
             throw new UnsupportedApiException('Not supported. Expected an instance of ' . SyliusApi::class);
         }
-
         $this->api = $api;
     }
 
