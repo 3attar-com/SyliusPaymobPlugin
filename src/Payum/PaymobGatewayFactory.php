@@ -20,11 +20,14 @@ final class PaymobGatewayFactory extends GatewayFactory
 
         $config['payum.api'] = function (ArrayObject $config) {
             return new SyliusApi(
-                $config['api_key'],
+                $config['secret_key'],
                 $config['hamc_security'],
                 $config['merchant_id'],
-                $config['iframe'],
-                $config['integration_id']
+                $config['iframe_url'],
+                $config['integration_id'],
+                $config['domain'],
+                $config['notification_url'],
+                $config['redirection_url']
             );
         };
     }

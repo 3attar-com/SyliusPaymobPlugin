@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Ahmedkhd\SyliusPaymobPlugin\Payum;
 
 
-final class SyliusApi
+final class SyliusApi implements SyliusPayumInterface
 {
     /** @var string */
     private $apiKey;
@@ -22,13 +22,19 @@ final class SyliusApi
     /** @var string */
     private $integrationId;
 
+    private $domain;
+    private $notificationUrl;
+    private $redirectionUrl;
 
     public function __construct(
         string $apiKey,
         string $hamcSecurity,
         string $merchantId,
         string $iframe,
-        string $integrationId
+        string $integrationId,
+        string $domain,
+        string $notificationUrl,
+        string $redirectionUrl
     )
     {
         $this->apiKey = $apiKey;
@@ -36,11 +42,24 @@ final class SyliusApi
         $this->merchantId = $merchantId;
         $this->iframe = $iframe;
         $this->integrationId = $integrationId;
+        $this->domain = $domain;
+        $this->notificationUrl = $notificationUrl;
+        $this->redirectionUrl = $redirectionUrl;
     }
 
     public function getApiKey(): string
     {
         return $this->apiKey;
+    }
+
+    public function getNotificationUrl(): string
+    {
+        return $this->notificationUrl;
+    }
+
+    public function getRedirectionUrl(): string
+    {
+        return $this->redirectionUrl;
     }
 
     /**
@@ -65,6 +84,11 @@ final class SyliusApi
     public function getIframe(): string
     {
         return $this->iframe;
+    }
+
+    public function getDomain()
+    {
+        return $this->domain;
     }
 
     /**
