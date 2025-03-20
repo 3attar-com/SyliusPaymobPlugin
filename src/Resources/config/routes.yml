@@ -11,10 +11,10 @@ hyper_pay_Action:
     _controller: Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:hyperpayAction
 
 hyper_pay_webhook_Action:
-    path: /payment/hyperpay/webhook
-    methods: [POST]
-    defaults:
-        _controller: Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:hyperpayWebhookAction
+  path: /payment/hyperpay/webhook
+  methods: [POST]
+  defaults:
+    _controller: Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:hyperpayWebhookAction
 
 
 ahmedkhd_sylius_paymob_plugin_notify_url_webhook:
@@ -29,5 +29,12 @@ hyperpay:
   methods: [GET]
   defaults:
     _controller: Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:hyperpay
+
+
+webhook:
+  path: /payment/webhook
+  methods: [post]
+  defaults:
+    _controller: Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:webhook
 
 
