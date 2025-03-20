@@ -7,7 +7,18 @@ services:
 
   Ahmedkhd\SyliusPaymobPlugin\Form\Type\SyliusGatewayConfigurationType:
     tags:
-      - { name: sylius.gateway_configuration_type, type: paymob, label: "Paymob Payment" }
+      - { name: sylius.gateway_configuration_type, type: paymob, label: "Paymob" }
+      - { name: form.type }
+
+  ahmedkhd.sylius_hyperpay_plugin.hyperpay:
+    class: Payum\Core\Bridge\Symfony\Builder\GatewayFactoryBuilder
+    arguments: [Ahmedkhd\SyliusPaymobPlugin\Payum\HyperPayGatewayFactory]
+    tags:
+      - { name: payum.gateway_factory_builder, factory: hyperpay }
+
+  Ahmedkhd\SyliusPaymobPlugin\Form\Type\SyliusGatewayConfigurationTypeHyperPay:
+    tags:
+      - { name: sylius.gateway_configuration_type, type: hyperpay, label: "Hyperpay" }
       - { name: form.type }
 
   Ahmedkhd\SyliusPaymobPlugin\Payum\Action\CaptureAction:
@@ -16,6 +27,7 @@ services:
     arguments: [ "@sylius.http_client" , "@service_container"]
     tags:
       - { name: payum.action, factory: paymob, alias: payum.action.capture }
+      - { name: payum.action, factory: hyperpay, alias: payum.action.capture }
 
   attar.sylius_paymob_plugin.service.paymob:
     class: Ahmedkhd\SyliusPaymobPlugin\Payum\Action\PaymobAction
