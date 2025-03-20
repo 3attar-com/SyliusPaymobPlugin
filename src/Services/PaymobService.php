@@ -2,68 +2,81 @@
 
 namespace Ahmedkhd\SyliusPaymobPlugin\Services;
 
+use App\Entity\Customer\Customer;
 use App\Entity\Order\Order;
 use App\Entity\Payment\Payment;
+use Monolog\Logger;
 use Sylius\Bundle\ResourceBundle\Doctrine\ORM\EntityRepository;
 use Sylius\Component\Core\Model\OrderInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
+use Sylius\Component\Core\OrderPaymentStates;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class PaymobService extends AbstractService implements PaymobServiceInterface
 {
     protected $paymentRepository;
+    protected $customerRepository;
 
     public const TRANSACTION_TYPE = "TRANSACTION";
 
-    public function __construct(ContainerInterface $container, EntityRepository $paymentRepository)
+    public function handelWebhook($request)
     {
-        parent::__construct($container);
-        $this->paymentRepository = $paymentRepository;
-    }
+        try {
+            $paymobResponse = \GuzzleHttp\json_decode($request->getContent());
+            $response = false;
+            if ($paymobResponse->obj->api_source == "INVOICE" && $paymobResponse->obj->order->data->type == "credit") {
+                try {
+                    $walletService = $this->get('workouse_digital_wallet.wallet_service');
 
-    public function setPaymentState($payment, $paymentState, $orderPaymentState)
-    {
-        /** @var OrderInterface $order */
-        $order = $payment->getOrder();
+                    $credit = $paymobResponse->obj->order->amount_cents;
+                    $email = $paymobResponse->obj->order->shipping_data->email;
 
-        $payment->setState($paymentState);
-        $order->setPaymentState($orderPaymentState);
-        $this->flushPaymentAndOrder($payment, $order);
+                    $customer = $this->customerRepository->findOneBy(['email' => $email]);
+                    $walletService->addCreditToCustomer($customer, "by Paymob", ["wallet" => $credit, "expiredAt" => "01/01/2099"]);
 
-        return $order;
-    }
+                    $response = true;
+                } catch (\Exception $exception) {
+                    $this->logger->emergency($exception);
+                }
 
-    public function flushPaymentAndOrder($payment, $order)
-    {
-        $em = $this->container->get('doctrine.orm.default_entity_manager');
-        $em->persist($payment);
-        $em->persist($order);
-        $em->flush();
-    }
+            } else if (
 
-    /**
-     * @param $payment_id
-     * @return PaymentInterface
-     */
-    public function getPaymentById($payment_id): PaymentInterface
-    {
-        $em = $this->container->get('doctrine.orm.default_entity_manager');
-        $paymentRepo = $em->getRepository(Payment::class);
-        /**@var $payment PaymentInterface|null */
-        $payment = $paymentRepo->findOneBy(['paymentGatewayOrderId' => $payment_id]);
+                !empty($paymobResponse) &&
+                isset($paymobResponse->obj->is_standalone_payment) &&
+                isset($paymobResponse->obj->success) && $paymobResponse->obj->success &&
+                isset($paymobResponse->type) && $paymobResponse->type == PaymobService::TRANSACTION_TYPE &&
+                isset($paymobResponse->obj->order->paid_amount_cents) &&
+                isset($paymobResponse->obj->order->id)
+            ) {
+                $payment = $this->getPaymentById($paymobResponse->obj->order->id);
+                $orderAmount = $paymobResponse->obj->order->paid_amount_cents;
+                $amount = $payment->getAmount();
+                if ($orderAmount === $amount) {
+                    $this->competeOrder($payment);
+                }
+            } else if (isset($paymobResponse->obj->order->id)) {
+                $paymentId = $paymobResponse->obj->order->id;
+                $payment = $this->paymobService->getPaymentById($paymentId);
+                $payment->setDetails(["status" => "failed", "message" => "payment_id: {$paymentId}"]);
 
-        if (null === $payment or $payment->getState() !== PaymentInterface::STATE_NEW) {
-            throw new NotFoundHttpException('Order not have available payment');
+                # create new payment so user can try to pay again
+                $newPayment = clone $payment;
+                $newPayment->setState(PaymentInterface::STATE_NEW);
+                $payment->getOrder()->addPayment($newPayment);
+
+                $order = $this->paymobService->setPaymentState($payment,
+                    PaymentInterface::STATE_FAILED,
+                    OrderPaymentStates::STATE_AWAITING_PAYMENT
+                );
+            }
+            $this->logger->emergency('"paymob callback"', [$paymobResponse]);
+        } catch (\Exception $ex) {
+            $this->logger->emergency($request);
+            $this->logger->emergency($ex);
         }
-        return $payment;
-    }
 
-    public function getOrder($payment_id)
-    {
-        $em = $this->container->get('doctrine.orm.default_entity_manager');
-        $paymentRepo = $em->getRepository(Payment::class);
-        $order = $paymentRepo->findOneBy([ 'paymentGatewayOrderId' => $payment_id])->getOrder();
-        return $order;
+        return new Response(\GuzzleHttp\json_encode(['success' => $response]), $response ? 200 : 400);
     }
 }

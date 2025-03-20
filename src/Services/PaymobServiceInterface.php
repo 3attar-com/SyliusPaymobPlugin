@@ -32,4 +32,5 @@ interface PaymobServiceInterface
      */
     public function getOrder($payment_id);
 
+    public function handelWebhook($request);
 }

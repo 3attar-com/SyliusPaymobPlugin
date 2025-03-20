@@ -48,16 +48,21 @@ services:
   ahmedkhd.sylius_paymob_plugin.service.paymob:
     class: Ahmedkhd\SyliusPaymobPlugin\Services\PaymobService
     public: true
-    arguments:
-      - '@service_container'
-      - '@sylius.repository.payment'
+    autowire: true
+    autoconfigure: true
+  #    arguments:
+  #      - '@service_container'
+  #      - '@sylius.repository.payment'
+  #      - '@sylius.repository.customer'
+  #      - '@monolog.logger.payment'
+
 
   ahmedkhd.sylius_paymob_plugin.service.hyperpay:
     class: Ahmedkhd\SyliusPaymobPlugin\Services\HyperPayService
     public: true
-    arguments:
-      - '@service_container'
-      - '@sylius.repository.payment'
+    autowire: true
+    autoconfigure: true
+
 
   Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:
     public: true
