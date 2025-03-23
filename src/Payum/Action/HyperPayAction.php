@@ -39,6 +39,7 @@ final class HyperPayAction implements Action
 
     protected $paymentRepository;
     protected $entityManager;
+    protected $logger;
 
     public function __construct(ContainerInterface $container, EntityRepository $paymentRepository)
     {
@@ -49,6 +50,7 @@ final class HyperPayAction implements Action
         ];
         $this->container = $container;
         $this->entityManager = $this->container->get('doctrine')->getManager();
+        $this->logger = $this->container->get('monolog.logger.payment');
     }
 
     private function prepareConfig($api)
@@ -84,6 +86,54 @@ final class HyperPayAction implements Action
         $res = $client->sendAsync($request, [])->wait();
         return (json_decode($res->getBody()->getContents(), true ));
     }
+    public function getcheckoutTamaraId($order, $cost)
+    {
+        try {
+            $client = new Client();
+            $headers = [
+                'Authorization' => "Bearer $this->token",
+            ];
+
+            $products = array_map(fn($item) => [
+                'merchantItemId' => $item->getProduct()->getId(),
+                'name' => $item->getProduct()->getName(),
+                'quantity' => $item->getQuantity(),
+                'sku' => $item->getProduct()->getCode(),
+                'totalAmount' => $item->getTotal() / 100,
+            ], $order->getItems()->toArray());
+            $queryParams = [
+                'entityId' => $this->entityId,
+                'amount' => $cost,
+                'currency' => 'SAR',
+                'paymentType' => 'DB',
+                'merchantTransactionId' => $order->getId(),
+                'customer.email' => $order->getCustomer()->getEmail() ?? "NA",
+                'customer.surname' => $order->getCustomer()->getLastName() ?? "NA",
+                'customer.givenName' => $order->getCustomer()->getFirstName() ?? "NA",
+                'billing.street1' => $order->getBillingAddress()->getStreet() ?? "NA",
+                'billing.city' => $order->getBillingAddress()->getCity() ?? "NA",
+                'billing.state' => $order->getBillingAddress()->getProvinceName() ?? "NA",
+                'billing.country' => $order->getBillingAddress()->getCountryCode() ?? "NA",
+                'billing.postcode' => $order->getBillingAddress()->getPostcode() ?? "NA",
+                'customer.givenName' => $order->getCustomer()->getFullName() ?? "NA",
+                'customParameters[instalments]' => 4,
+                'customParameters[tamara_payment_type]' => 'PAY_BY_INSTALMENTS',
+                'integrity'=> true,
+            ];
+            foreach ($products as $index => $item) {
+                foreach ($item as $key => $value) {
+                    $queryParams["cart.items[$index].$key"] = $value;
+                }
+            }
+            $res = $client->post($this->url . '/v1/checkouts', [
+                'headers' => $headers,
+                'form_params' => $queryParams
+            ]);
+        }catch (\Exception $exception){
+            $this->logger->error($exception->getMessage());
+        }
+        return (json_decode($res->getBody()->getContents(), true ));
+    }
 
     public function execute($request, $client, $api)
     {
@@ -96,7 +146,11 @@ final class HyperPayAction implements Action
 
         try {
             $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING]);
-            $paymentToken = $this->getcheckoutId($order, number_format($payment->getOrder()->getTotal() / 100, 2));
+            if ($payment->getMethod()->getCode() === 'tamara')  {
+                $paymentToken = $this->getcheckoutTamaraId($order, number_format($payment->getOrder()->getTotal() / 100, 2));
+            }   else    {
+                $paymentToken = $this->getcheckoutId($order, number_format($payment->getOrder()->getTotal() / 100, 2));
+            }
             $payment->setPaymentGatewayOrderId($paymentToken['ndc']);
             $iframeURL = $this->api->getIframeUrl() . "?payment_token={$paymentToken['id']}" . "&method={$payment->getMethod()->getCode()}";
             $this->entityManager->flush();
