@@ -12,6 +12,7 @@ use Sylius\Component\Core\Repository\CustomerRepositoryInterface;
 use Sylius\Component\Core\Repository\PaymentRepositoryInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Sylius\Component\Core\Model\PaymentInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface as SymfonyEventDispatcherInterface;
 
@@ -24,6 +25,7 @@ abstract class AbstractService
     protected $paymentRepository;
     protected $customerRepository;
     protected $logger;
+    protected $parameterBag;
     /**
      * AbstractService constructor.
      * @param ContainerInterface $container
@@ -32,7 +34,9 @@ abstract class AbstractService
                                 SymfonyEventDispatcherInterface $eventDispatcher,
                                 OrderEmailManagerInterface $orderEmailManager,
                                 PaymentRepositoryInterface $paymentRepository,
-                                CustomerRepositoryInterface $customerRepository
+                                CustomerRepositoryInterface $customerRepository,
+                                ParameterBagInterface $parameterBag
+
     )
     {
         $this->container = $container;
@@ -41,6 +45,7 @@ abstract class AbstractService
         $this->paymentRepository = $paymentRepository;
         $this->customerRepository = $customerRepository;
         $this->logger = $this->container->get('monolog.logger.payment');
+        $this->parameterBag = $parameterBag;
     }
 
 

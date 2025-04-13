@@ -58,7 +58,7 @@ final class PaymobService extends AbstractService implements PaymobServiceInterf
                 }
             } else if (isset($paymobResponse->obj->order->id)) {
                 $paymentId = $paymobResponse->obj->order->id;
-                $payment = $this->paymobService->getPaymentById($paymentId);
+                $payment = $this->getPaymentById($paymentId);
                 $payment->setDetails(["status" => "failed", "message" => "payment_id: {$paymentId}"]);
 
                 # create new payment so user can try to pay again
@@ -66,7 +66,7 @@ final class PaymobService extends AbstractService implements PaymobServiceInterf
                 $newPayment->setState(PaymentInterface::STATE_NEW);
                 $payment->getOrder()->addPayment($newPayment);
 
-                $order = $this->paymobService->setPaymentState($payment,
+                $order = $this->setPaymentState($payment,
                     PaymentInterface::STATE_FAILED,
                     OrderPaymentStates::STATE_AWAITING_PAYMENT
                 );

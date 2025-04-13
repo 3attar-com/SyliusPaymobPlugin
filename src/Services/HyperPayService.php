@@ -39,7 +39,7 @@ final class HyperPayService extends AbstractService implements PaymobServiceInte
             $res = ($client->send($request));
             return (json_decode($res->getBody()->getContents(), true));
         } catch (Exception $ex) {
-            dd($ex->getMessage());
+            $this->log->emergency($ex->getMessage());
         }
     }
 
