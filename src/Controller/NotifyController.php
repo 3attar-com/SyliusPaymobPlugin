@@ -40,7 +40,7 @@ class NotifyController extends AbstractController
 
     private $parameterBag;
 
-    
+
     public function __construct(
         Payum $payum,
         PaymobServiceInterface $paymobService,
@@ -110,10 +110,7 @@ class NotifyController extends AbstractController
     public function hyperpayWebhookAction(Request $request)
     {
         $request->query->set('gateway', 'hyperpay');
-        $this->webhook($request);
-        return new Response('success', 200, [
-            'Content-Type' => 'text/xml'
-        ]);
+        return $this->webhook($request);
     }
 
     public function doAction(Request $request)

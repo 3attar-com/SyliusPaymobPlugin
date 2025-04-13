@@ -39,7 +39,7 @@ final class HyperPayService extends AbstractService implements PaymobServiceInte
             $res = ($client->send($request));
             return (json_decode($res->getBody()->getContents(), true));
         } catch (Exception $ex) {
-            $this->log->emergency($ex->getMessage());
+            $this->logger->emergency($ex->getMessage());
         }
     }
 
@@ -92,13 +92,14 @@ final class HyperPayService extends AbstractService implements PaymobServiceInte
         unset($logData['redirect']);
         unset($logData['authentication']);
         unset($logData['shortId']);
-        $this->log->info('Request details', [
+
+        $this->logger->info('Request details', [
             'result' => $logData
         ]);
-
         try {
             if ($result['type'] === 'PAYMENT' && $result['payload']['result']['code'] === '000.000.000') {
-                $this->competeOrder($result['payload']['ndc']);
+                $payment = $this->getPaymentById($result['payload']['ndc']);
+                $this->competeOrder($payment);
                 return new Response('success', 200, [
                     'Content-Type' => 'text/xml'
                 ]);
@@ -107,7 +108,7 @@ final class HyperPayService extends AbstractService implements PaymobServiceInte
                 'Content-Type' => 'text/xml'
             ]);
         } catch (\Exception $ex) {
-            $this->log->emergency($ex);
+            $this->logger->emergency($ex);
         }
     }
 }
