@@ -100,6 +100,7 @@ final class HyperPayAction implements Action
                 'quantity' => $item->getQuantity(),
                 'sku' => $item->getProduct()->getCode(),
                 'totalAmount' => $item->getTotal() / 100,
+                'type' => 'PHYSICAL'
             ], $order->getItems()->toArray());
             $queryParams = [
                 'entityId' => $this->entityId,
