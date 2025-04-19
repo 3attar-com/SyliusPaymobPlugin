@@ -83,7 +83,7 @@ services:
 
   Ahmedkhd\SyliusPaymobPlugin\Services\TamaraService:
     arguments:
-      $client: '@guzzle.client'
+      $client: '@sylius.http_client'
       $logger: '@logger'
       $tamaraToken: '%env(TAMARA_API_TOKEN)%'
       $tamaraEnv: '%env(TAMARA_ENVIRONMENT)%'
