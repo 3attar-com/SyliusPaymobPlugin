@@ -87,6 +87,7 @@ class NotifyController extends AbstractController
                 $merchantTransactionId = $transactionStatus['merchantTransactionId'];
                 $orderDetails = $this->tamaraService->getOrderByReferenceId($merchantTransactionId);
                 if ($orderDetails && isset($orderDetails['status']) && $orderDetails['status'] == 'fully_captured') {
+                    $this->paymobService->completeOrderById($transactionStatus['ndc']);
                     return $this->redirectToRoute('sylius_shop_order_thank_you');
                 }
                 return $this->redirectToRoute('payment_failure');
