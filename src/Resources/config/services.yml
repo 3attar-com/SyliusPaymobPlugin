@@ -84,5 +84,6 @@ services:
   App\Service\TamaraService:
     arguments:
       $client: '@guzzle.client'
+      $logger: '@logger'
       $tamaraToken: '%env(TAMARA_API_TOKEN)%'
       $tamaraEnv: '%env(TAMARA_ENVIRONMENT)%'
