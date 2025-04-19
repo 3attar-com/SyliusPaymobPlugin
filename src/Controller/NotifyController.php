@@ -21,7 +21,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface as SymfonyEventDispatcherInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use GuzzleHttp\Psr7\Request as GuzzleRequest;
-use App\Service\TamaraService;
+use Ahmedkhd\SyliusPaymobPlugin\Services\TamaraService;
 
 class NotifyController extends AbstractController
 {
