@@ -80,3 +80,10 @@ services:
 #    calls:
 #      - { method: initializeArrayRouter, arguments: [] }
 #      - { method: setContainer, arguments: [ '@service_container' ] }
+
+  Ahmedkhd\SyliusPaymobPlugin\Services\TamaraService:
+    arguments:
+      $client: '@sylius.http_client'
+      $logger: '@logger'
+      $tamaraToken: '%env(TAMARA_API_TOKEN)%'
+      $tamaraEnv: '%env(TAMARA_ENVIRONMENT)%'

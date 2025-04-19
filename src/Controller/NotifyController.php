@@ -7,6 +7,7 @@ use Ahmedkhd\SyliusPaymobPlugin\Services\PaymobServiceInterface;
 use App\Entity\Customer\Customer;
 use App\Entity\Order\Order;
 use App\Entity\Payment\Payment;
+use GuzzleHttp\Client;
 use Monolog\Logger;
 use Payum\Core\Payum;
 use Sylius\Bundle\ResourceBundle\Event\ResourceControllerEvent;
@@ -19,6 +20,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface as SymfonyEventDispatcherInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use GuzzleHttp\Psr7\Request as GuzzleRequest;
+use Ahmedkhd\SyliusPaymobPlugin\Services\TamaraService;
 
 class NotifyController extends AbstractController
 {
@@ -40,6 +43,8 @@ class NotifyController extends AbstractController
 
     private $parameterBag;
 
+    private $tamaraService;
+
 
     public function __construct(
         Payum $payum,
@@ -47,7 +52,8 @@ class NotifyController extends AbstractController
         Logger $log,
         OrderEmailManagerInterface $orderEmailManager,
         SymfonyEventDispatcherInterface $eventDispatcher,
-        ParameterBagInterface $parameterBag
+        ParameterBagInterface $parameterBag,
+        TamaraService $tamaraService
     ) {
         $this->payum = $payum;
         $this->paymobService = $paymobService;
@@ -55,6 +61,7 @@ class NotifyController extends AbstractController
         $this->orderEmailManager = $orderEmailManager;
         $this->eventDispatcher = $eventDispatcher;
         $this->parameterBag = $parameterBag;
+        $this->tamaraService = $tamaraService;
     }
 
     /**
@@ -76,6 +83,15 @@ class NotifyController extends AbstractController
             $query = $request->query->all();
             $hyperpayService = $this->container->get('ahmedkhd.sylius_paymob_plugin.service.hyperpay');
             $transactionStatus = $hyperpayService->getTransactionStatus($query);
+            if ($transactionStatus['paymentBrand'] == 'TAMARA') {
+                $merchantTransactionId = $transactionStatus['merchantTransactionId'];
+                $orderDetails = $this->tamaraService->getOrderByReferenceId($merchantTransactionId);
+                if ($orderDetails && isset($orderDetails['status']) && $orderDetails['status'] == 'fully_captured') {
+                    $this->paymobService->completeOrderById($transactionStatus['ndc']);
+                    return $this->redirectToRoute('sylius_shop_order_thank_you');
+                }
+                return $this->redirectToRoute('payment_failure');
+            }
             if($transactionStatus && in_array($transactionStatus['result']['code'] , ['000.000.000','000.100.110'])) {
                 $this->paymobService->completeOrderById($transactionStatus['ndc']);
                 return $this->redirectToRoute('sylius_shop_order_thank_you');
