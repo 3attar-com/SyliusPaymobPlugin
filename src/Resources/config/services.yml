@@ -80,3 +80,9 @@ services:
 #    calls:
 #      - { method: initializeArrayRouter, arguments: [] }
 #      - { method: setContainer, arguments: [ '@service_container' ] }
+
+  App\Service\TamaraService:
+    arguments:
+      $client: '@guzzle.client'
+      $tamaraToken: '%env(TAMARA_API_TOKEN)%'
+      $tamaraEnv: '%env(TAMARA_ENVIRONMENT)%'
