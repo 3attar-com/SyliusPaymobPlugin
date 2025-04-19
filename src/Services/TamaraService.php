@@ -1,7 +1,6 @@
 <?php
 
-
-namespace App\Service;
+namespace Ahmedkhd\SyliusPaymobPlugin\Services;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request as GuzzleRequest;

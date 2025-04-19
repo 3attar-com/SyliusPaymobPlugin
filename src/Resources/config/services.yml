@@ -81,7 +81,7 @@ services:
 #      - { method: initializeArrayRouter, arguments: [] }
 #      - { method: setContainer, arguments: [ '@service_container' ] }
 
-  App\Service\TamaraService:
+  Ahmedkhd\SyliusPaymobPlugin\Services\TamaraService:
     arguments:
       $client: '@guzzle.client'
       $logger: '@logger'
