@@ -92,10 +92,14 @@ class NotifyController extends AbstractController
                 }
                 return $this->redirectToRoute('payment_failure');
             }
-            if($transactionStatus && in_array($transactionStatus['result']['code'] , ['000.000.000','000.100.110'])) {
+            if($transactionStatus && ($transactionStatus['result']['code'] == '000.100.110')) {
                 $this->paymobService->completeOrderById($transactionStatus['ndc']);
                 return $this->redirectToRoute('sylius_shop_order_thank_you');
             }
+            if($transactionStatus && ($transactionStatus['result']['code'] == '000.000.000')) {
+                return $this->redirectToRoute('sylius_shop_order_thank_you');
+            }
+
             return $this->redirectToRoute('payment_failure');
         } catch (\Exception $ex) {
             $this->log->emergency($ex->getMessage());
