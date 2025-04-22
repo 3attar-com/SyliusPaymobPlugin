@@ -16,6 +16,7 @@ use GuzzleHttp\Psr7\Request as GuzzleRequest;
 use GuzzleHttp\Client;
 use Ahmedkhd\SyliusPaymobPlugin\Payum\Action\CaptureAction;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use GuzzleHttp\Exception\ClientException;
 
 final class HyperPayAction implements Action
 {
@@ -99,7 +100,7 @@ final class HyperPayAction implements Action
                 'name' => $item->getProduct()->getName(),
                 'quantity' => $item->getQuantity(),
                 'sku' => $item->getProduct()->getCode(),
-                'totalAmount' => $item->getTotal() / 100,
+                'totalAmount' => number_format($item->getTotal() / 100, 2, '.', ''),
                 'type' => 'PHYSICAL'
             ], $order->getItems()->toArray());
             $queryParams = [
@@ -129,7 +130,13 @@ final class HyperPayAction implements Action
                 'headers' => $headers,
                 'form_params' => $queryParams
             ]);
-        }catch (\Exception $exception){
+        } catch (ClientException $exception) {
+            $body = $exception->getResponse()->getBody()->getContents();
+            $data = json_decode($body, true);
+            $this->logger->error("Failed to Create Iframe" , [
+                'data' => $data
+            ]);
+        }  catch (\Exception $exception)   {
             $this->logger->error($exception->getMessage());
         }
         return (json_decode($res->getBody()->getContents(), true ));
