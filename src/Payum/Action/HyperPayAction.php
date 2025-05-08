@@ -61,6 +61,27 @@ final class HyperPayAction implements Action
         $this->entityId = $api->getEntityId();
     }
 
+    public function prepareOrderAddress($order)
+    {
+        $address = [
+            'billing.street1' => "٣٩٦٩ شارع عبدالله بن فيصل، حي المربع،",
+            'billing.city' => "الرياض",
+            'billing.state' => "الرياض",
+            'billing.country' => "SA",
+            'billing.postcode' => "12613"
+        ];
+
+        if ($order->getState() != 'wallet') {
+            $address = [
+                'billing.street1' => $order->getBillingAddress()->getStreet() ?? "NA",
+                'billing.city' => $order->getBillingAddress()->getCity() ?? "NA",
+                'billing.state' => $order->getBillingAddress()->getProvinceName() ?? "NA",
+                'billing.country' => $order->getBillingAddress()->getCountryCode() ?? "NA",
+                'billing.postcode' => $order->getBillingAddress()->getPostcode() ?? "NA"
+            ];
+        }
+        return $address;
+    }
     public function getcheckoutId($order, $cost)
     {
         $client = new Client();
@@ -74,14 +95,10 @@ final class HyperPayAction implements Action
             'paymentType' => 'DB',
             'merchantTransactionId' => $order->getId(),
             'customer.email' => $order->getCustomer()->getEmail() ?? "NA",
-            'billing.street1' => $order->getBillingAddress()->getStreet() ?? "NA",
-            'billing.city' => $order->getBillingAddress()->getCity() ?? "NA",
-            'billing.state' => $order->getBillingAddress()->getProvinceName() ?? "NA",
-            'billing.country' => $order->getBillingAddress()->getCountryCode() ?? "NA",
-            'billing.postcode' => $order->getBillingAddress()->getPostcode() ?? "NA",
             'customer.givenName' => $order->getCustomer()->getFullName() ?? "NA",
             'customer.mobile' => $order->getCustomer()->getPhoneNumber() ?? "NA"
         ];
+        $queryParams = array_merge($queryParams, $this->prepareOrderAddress($order));
         $urlWithParams = $this->url . '/v1/checkouts?' . http_build_query($queryParams);
         $request = new GuzzleRequest('POST', $urlWithParams, $headers);
         $res = $client->sendAsync($request, [])->wait();
@@ -112,15 +129,11 @@ final class HyperPayAction implements Action
                 'customer.email' => $order->getCustomer()->getEmail() ?? "NA",
                 'customer.surname' => $order->getCustomer()->getLastName() ?? $order->getBillingAddress()->getLastName() ?? "NA",
                 'customer.givenName' => $order->getCustomer()->getFirstName() ?? $order->getBillingAddress()->getFirstName() ?? "NA",
-                'billing.street1' => $order->getBillingAddress()->getStreet() ?? "NA",
-                'billing.city' => $order->getBillingAddress()->getCity() ?? "NA",
-                'billing.state' => $order->getBillingAddress()->getProvinceName() ?? "NA",
-                'billing.country' => $order->getBillingAddress()->getCountryCode() ?? "NA",
-                'billing.postcode' => $order->getBillingAddress()->getPostcode() ?? "NA",
                 'customParameters[instalments]' => 4,
                 'customParameters[tamara_payment_type]' => 'PAY_BY_INSTALMENTS',
                 'integrity'=> true,
             ];
+            $queryParams = array_merge($queryParams, $this->prepareOrderAddress($order));
             foreach ($products as $index => $item) {
                 foreach ($item as $key => $value) {
                     $queryParams["cart.items[$index].$key"] = $value;
