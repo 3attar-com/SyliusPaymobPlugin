@@ -5,58 +5,28 @@ namespace Ahmedkhd\SyliusPaymobPlugin\Services;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request as GuzzleRequest;
 use Psr\Log\LoggerInterface;
+use Sylius\Bundle\ResourceBundle\Doctrine\ORM\EntityRepository;
+use Sylius\Component\Core\Model\PaymentInterface;
+use Sylius\Component\Core\Model\PaymentMethod;
+use Sylius\Component\Core\OrderPaymentStates;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Response;
 
-class TamaraService
+class TamaraService extends AbstractService implements PaymobServiceInterface
 {
-    private $client;
-    private $tamaraToken;
-    private $baseUrl;
-    private $logger;
-
-    const SANDBOX_BASE_URL = 'https://api-sandbox.tamara.co';
-    const LIVE_BASE_URL = 'https://api.tamara.co';
-
-    public function __construct(Client $client, LoggerInterface $logger, string $tamaraToken, string $tamaraEnv)
+    public function handelWebhook($request)
     {
-        $this->client = $client;
-        $this->logger = $logger;
-        $this->tamaraToken = $tamaraToken;
-        $this->baseUrl = $tamaraEnv === 'sandbox' ? self::SANDBOX_BASE_URL : self::LIVE_BASE_URL;
-    }
+        $this->logger->info('Tamara webhook', ['request' => json_decode($request->getContent(), true)]);
 
-    public function getOrderByReferenceId(string $referenceId): ?array
-    {
-        try {
-            $request = new GuzzleRequest(
-                'GET',
-                $this->baseUrl . '/merchants/orders/reference-id/' . $referenceId,
-                [
-                    'Accept' => 'application/json',
-                    'Authorization' => 'Bearer ' . $this->tamaraToken,
-                ]
-            );
+        if ($request->get('event_type') === 'order_captured') {
+            $orderId = $request->get('order_number');
 
-            $response = $this->client->send($request);
+            $method = $this->container->get('doctrine.orm.entity_manager')->getRepository(PaymentMethod::class)->findOneBy(['code' => 'tamara']);
 
-            // Check if the response status is 200 (OK)
-            if ($response->getStatusCode() === 200) {
-                $body = $response->getBody()->getContents();
-                return json_decode($body, true);
-            }
-
-            // Log response status and body if not 200
-            $this->logger->error("Tamara API Error", [
-                'status_code' => $response->getStatusCode(),
-                'body' => $response->getBody()->getContents()
-            ]);
-
-            return null;
-        } catch (\Exception $e) {
-            // Log the exception
-            $this->logger->error("Error fetching Tamara order", [
-                'exception' => $e->getMessage()
-            ]);
-            return null;
+            $payment = $this->paymentRepository->findOneBy(['method' => $method, 'order' => $orderId]);
+            $this->competeOrder($payment);
         }
+        return true;
     }
+
 }
