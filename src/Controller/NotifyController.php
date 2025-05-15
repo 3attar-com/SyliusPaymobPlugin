@@ -82,7 +82,7 @@ class NotifyController extends AbstractController
         try {
             $query = $request->query->all();
             $hyperpayService = $this->container->get('ahmedkhd.sylius_paymob_plugin.service.hyperpay');
-            $transactionStatus = $hyperpayService->getTransactionStatus($query);
+           $transactionStatus = $hyperpayService->getTransactionStatus($query);
             if ($transactionStatus['paymentBrand'] == 'TAMARA') {
                 $merchantTransactionId = $transactionStatus['merchantTransactionId'];
                 $orderDetails = $this->tamaraService->getOrderByReferenceId($merchantTransactionId);
