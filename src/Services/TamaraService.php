@@ -41,7 +41,7 @@ class TamaraService extends AbstractService implements PaymobServiceInterface
         parent::__construct($container, $eventDispatcher, $orderEmailManager, $paymentRepository, $customerRepository, $parameterBag);
         $this->client = $client;
         $this->tamaraToken = $tamaraToken;
-        $this->baseUrl = $tamaraEnv !== 'sandbox' ? self::SANDBOX_BASE_URL : self::LIVE_BASE_URL;
+        $this->baseUrl = $tamaraEnv === 'sandbox' ? self::SANDBOX_BASE_URL : self::LIVE_BASE_URL;
     }
 
     public function getOrderByReferenceId(string $referenceId): ?array
