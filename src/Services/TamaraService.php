@@ -5,21 +5,41 @@ namespace Ahmedkhd\SyliusPaymobPlugin\Services;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request as GuzzleRequest;
 use Psr\Log\LoggerInterface;
+use Sylius\Bundle\ResourceBundle\Doctrine\ORM\EntityRepository;
+use Sylius\Bundle\ShopBundle\EmailManager\OrderEmailManagerInterface;
+use Sylius\Component\Core\Model\PaymentInterface;
+use Sylius\Component\Core\Model\PaymentMethod;
+use Sylius\Component\Core\OrderPaymentStates;
+use Sylius\Component\Core\Repository\CustomerRepositoryInterface;
+use Sylius\Component\Core\Repository\PaymentRepositoryInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface as SymfonyEventDispatcherInterface;
 
-class TamaraService
+class TamaraService extends AbstractService implements PaymobServiceInterface
 {
+
     private $client;
     private $tamaraToken;
     private $baseUrl;
-    private $logger;
 
     const SANDBOX_BASE_URL = 'https://api-sandbox.tamara.co';
     const LIVE_BASE_URL = 'https://api.tamara.co';
 
-    public function __construct(Client $client, LoggerInterface $logger, string $tamaraToken, string $tamaraEnv)
-    {
+    public function __construct(
+        ContainerInterface $container,
+        SymfonyEventDispatcherInterface $eventDispatcher,
+        OrderEmailManagerInterface $orderEmailManager,
+        PaymentRepositoryInterface $paymentRepository,
+        CustomerRepositoryInterface $customerRepository,
+        ParameterBagInterface $parameterBag,
+        Client $client,
+        $tamaraToken,
+        $tamaraEnv
+    ) {
+        parent::__construct($container, $eventDispatcher, $orderEmailManager, $paymentRepository, $customerRepository, $parameterBag);
         $this->client = $client;
-        $this->logger = $logger;
         $this->tamaraToken = $tamaraToken;
         $this->baseUrl = $tamaraEnv === 'sandbox' ? self::SANDBOX_BASE_URL : self::LIVE_BASE_URL;
     }
@@ -58,5 +78,19 @@ class TamaraService
             ]);
             return null;
         }
+    }    public function handelWebhook($request)
+    {
+        $this->logger->info('Tamara webhook', ['request' => $request->getContent()]);
+
+        if ($request->get('event_type') === 'order_captured') {
+            $orderId = $request->get('order_number');
+
+            $method = $this->container->get('doctrine.orm.entity_manager')->getRepository(PaymentMethod::class)->findOneBy(['code' => 'tamara']);
+
+            $payment = $this->paymentRepository->findOneBy(['method' => $method, 'order' => $orderId]);
+            $this->competeOrder($payment);
+        }
+        return true;
     }
+
 }

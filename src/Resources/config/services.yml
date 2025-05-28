@@ -62,6 +62,15 @@ services:
     public: true
     autowire: true
     autoconfigure: true
+    
+  ahmedkhd.sylius_paymob_plugin.service.tamara:
+      class: Ahmedkhd\SyliusPaymobPlugin\Services\TamaraService
+      public: true
+      autowire: true
+      autoconfigure: true
+      arguments:
+          $tamaraToken: '%env(TAMARA_API_TOKEN)%'
+          $tamaraEnv: '%env(TAMARA_ENVIRONMENT)%'
 
 
   Ahmedkhd\SyliusPaymobPlugin\Controller\NotifyController:
@@ -74,6 +83,7 @@ services:
       - '@sylius.email_manager.order'
       - '@event_dispatcher'
       - '@parameter_bag'
+      - '@ahmedkhd.sylius_paymob_plugin.service.tamara'
 
 #      - '@router'
 #      - '@be_happy_rights_management.repository.right'
@@ -81,9 +91,3 @@ services:
 #      - { method: initializeArrayRouter, arguments: [] }
 #      - { method: setContainer, arguments: [ '@service_container' ] }
 
-  Ahmedkhd\SyliusPaymobPlugin\Services\TamaraService:
-    arguments:
-      $client: '@sylius.http_client'
-      $logger: '@logger'
-      $tamaraToken: '%env(TAMARA_API_TOKEN)%'
-      $tamaraEnv: '%env(TAMARA_ENVIRONMENT)%'
