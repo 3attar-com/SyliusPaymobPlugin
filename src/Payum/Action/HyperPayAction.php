@@ -166,14 +166,17 @@ final class HyperPayAction implements Action
 
         try {
             $payment->setDetails(['status' => PaymentInterface::STATE_PROCESSING]);
-            if ($payment->getMethod()->getCode() === 'tamara')  {
+            if (str_contains($payment->getMethod()->getCode(), 'tamara'))  {
                 $paymentToken = $this->getcheckoutTamaraId($order, number_format($payment->getOrder()->getTotal() / 100, 2));
             }   else    {
                 $paymentToken = $this->getcheckoutId($order, number_format($payment->getOrder()->getTotal() / 100, 2));
             }
             $payment->setPaymentGatewayOrderId($paymentToken['ndc']);
-            $iframeURL = $this->api->getIframeUrl() . "?payment_token={$paymentToken['id']}" . "&method={$payment->getMethod()->getCode()}";
+
+            $method = str_contains($payment->getMethod()->getCode(), 'tamara') ? 'tamara' : $payment->getMethod()->getCode();
+            $iframeURL = $this->api->getIframeUrl() . "?payment_token={$paymentToken['id']}" . "&method={$method}";
             $this->entityManager->flush();
+
             $this->api->doPayment($iframeURL);
         } catch (RequestException $exception) {
             $payment->setDetails(['status' => "failed", "message" => $exception->getMessage()]);
